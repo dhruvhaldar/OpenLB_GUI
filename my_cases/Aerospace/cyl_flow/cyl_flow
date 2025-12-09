@@ -1,0 +1,7 @@
+#!/bin/bash
+echo "Simulation started for cyl_flow"
+for i in {1..5}; do
+    echo "Step $i/5 computing..."
+    sleep 0.5
+done
+echo "Simulation finished."
