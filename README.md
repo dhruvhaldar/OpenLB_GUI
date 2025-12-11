@@ -2,7 +2,7 @@
 
 OpenLB Manager is a lightweight, full-stack graphical user interface for the OpenLB C++ library. It allows users to scan, configure, compile, and run simulation cases without interacting directly with the terminal.
 
-## 🚀 Features
+## Features
 
 *   **Case Scanner**: Automatically detects simulation cases (based on `Makefile` presence) in the `my_cases` directory.
 *   **GUI Wrapper**: A modern web interface (React + Tailwind CSS) to interact with the build system.
