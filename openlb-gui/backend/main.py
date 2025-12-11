@@ -5,8 +5,18 @@ import os
 import subprocess
 import glob
 from pathlib import Path
+from setup_olb import setup_olb
 
 app = FastAPI()
+
+# Resolve cases directory relative to the project root (2 levels up from backend/main.py)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+CASES_DIR = str(PROJECT_ROOT / "my_cases")
+
+@app.on_event("startup")
+def startup_event():
+    """Ensure OpenLB is set up on startup."""
+    setup_olb(PROJECT_ROOT)
 
 # Allow CORS for frontend dev
 app.add_middleware(
@@ -16,10 +26,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Resolve cases directory relative to the project root (2 levels up from backend/main.py)
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-CASES_DIR = str(PROJECT_ROOT / "my_cases")
 
 class CommandRequest(BaseModel):
     case_path: str

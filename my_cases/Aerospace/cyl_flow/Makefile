@@ -1,11 +1,16 @@
-all:
-	@echo "Compiling cyl_flow..."
-	@sleep 1
-	@echo "g++ -o cyl_flow main.cpp"
-	@touch cyl_flow
-	@chmod +x cyl_flow
-	@echo "Build complete."
+# Makefile for cyl_flow using OpenLB
 
+# Project name
+EXAMPLE = cyl_flow
+
+# Path to OpenLB root (relative to this directory)
+OLB_ROOT := ../../../olb-release
+
+# Include OpenLB default Makefile
+include $(OLB_ROOT)/default.mk
+
+# Custom run target
 run:
-	@echo "Running cyl_flow..."
-	@./cyl_flow
+	@mkdir -p tmp
+	@echo "Running $(EXAMPLE)..."
+	./$(EXAMPLE)

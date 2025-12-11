@@ -21,3 +21,11 @@ yarn-error.log*
 
 # OS
 .DS_Store
+
+# OpenLB
+olb-release/
+my_cases/Aerospace/cyl_flow/tmp/
+*.o
+*.d
+my_cases/Aerospace/cyl_flow/cyl_flow
+release-1.8.1/
