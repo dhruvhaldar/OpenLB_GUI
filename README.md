@@ -117,7 +117,3 @@ my_cases/
 *   **Build Failures**: Check the `Makefile` in the specific case directory by running `make` manually in the terminal.
 *   **MPI Errors**: Ensure `mpirun` is available in your system path.
 *   **Frontend Connection Refused**: Make sure the backend is running on port 8000.
-
-## 📝 License
-
-[Insert License Here]
