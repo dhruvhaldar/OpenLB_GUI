@@ -36,12 +36,10 @@ The project is organized into the following structure:
 
 ## 📋 Prerequisites
 
-*   **Operating System**: Linux (Ubuntu 20.04+ recommended) or MacOS.
 *   **OpenLB**: v1.6 or higher (installed and referenced in your Makefiles).
 *   **MPI**: OpenMPI or MPICH (for parallel simulations).
 *   **Python**: v3.8 or higher.
 *   **Node.js**: v18 or higher (for building the frontend).
-*   **uvicorn**: a python package for running fastapi servers.
 
 ## 🛠 Installation
 
