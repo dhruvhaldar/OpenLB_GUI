@@ -8,7 +8,7 @@ interface Case {
   domain: string;
 }
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://localhost:8080';
 
 function App() {
   const [cases, setCases] = useState<Case[]>([]);

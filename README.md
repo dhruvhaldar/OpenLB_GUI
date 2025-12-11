@@ -41,6 +41,7 @@ The project is organized into the following structure:
 *   **MPI**: OpenMPI or MPICH (for parallel simulations).
 *   **Python**: v3.8 or higher.
 *   **Node.js**: v18 or higher (for building the frontend).
+*   **uvicorn**: a python package for running fastapi servers.
 
 ## 🛠 Installation
 
@@ -64,7 +65,7 @@ pip install fastapi uvicorn
 Navigate to the frontend directory and install dependencies:
 
 ```bash
-cd ../frontend
+cd openlb-gui/frontend/
 npm install
 npm run build
 ```
@@ -78,7 +79,7 @@ Run the backend and frontend in separate terminals for hot-reloading.
 ```bash
 cd openlb-gui/backend
 source venv/bin/activate
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8080
 ```
 
 **Terminal 2 (Frontend):**
