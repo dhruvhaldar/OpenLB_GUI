@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Terminal, Play, Settings, Folder, FileText, Activity } from 'lucide-react';
+import { Terminal, Play, Settings, Folder, FileText, Activity, Loader2, Check } from 'lucide-react';
 
 interface Case {
   id: string;
@@ -16,20 +16,20 @@ function App() {
   const [config, setConfig] = useState('');
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, success, error
 
   useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        const res = await fetch(`${API_URL}/cases`);
+        const data = await res.json();
+        setCases(data);
+      } catch (e) {
+        console.error('Failed to fetch cases', e);
+      }
+    };
     fetchCases();
   }, []);
-
-  const fetchCases = async () => {
-    try {
-      const res = await fetch(`${API_URL}/cases`);
-      const data = await res.json();
-      setCases(data);
-    } catch (e) {
-      console.error('Failed to fetch cases', e);
-    }
-  };
 
   const fetchConfig = async (casePath: string) => {
     try {
@@ -43,15 +43,19 @@ function App() {
 
   const saveConfig = async () => {
     if (!selectedCase) return;
+    setSaveStatus('saving');
     try {
       await fetch(`${API_URL}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ case_path: selectedCase.path, content: config })
       });
-      alert('Configuration saved!');
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (e) {
       console.error('Failed to save config', e);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
@@ -69,7 +73,7 @@ function App() {
       setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
       if (data.success) setOutput(prev => prev + '\nBuild Successful.\n');
       else setOutput(prev => prev + '\nBuild Failed.\n');
-    } catch (e) {
+    } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
     setStatus('idle');
@@ -89,7 +93,7 @@ function App() {
       setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
       if (data.success) setOutput(prev => prev + '\nRun Finished.\n');
       else setOutput(prev => prev + '\nRun Failed.\n');
-    } catch (e) {
+    } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
     setStatus('idle');
@@ -150,7 +154,22 @@ function App() {
                   <h3 className="font-semibold text-gray-400 flex items-center gap-2">
                     <FileText size={16} /> Configuration
                   </h3>
-                  <button onClick={saveConfig} className="text-sm text-blue-400 hover:text-blue-300">Save</button>
+                  <button
+                    onClick={saveConfig}
+                    disabled={saveStatus === 'saving' || saveStatus === 'success'}
+                    className={`text-sm flex items-center gap-1 transition-colors ${
+                      saveStatus === 'success' ? 'text-green-400' :
+                      saveStatus === 'error' ? 'text-red-400' :
+                      'text-blue-400 hover:text-blue-300'
+                    }`}
+                  >
+                    {saveStatus === 'saving' && <Loader2 size={14} className="animate-spin" />}
+                    {saveStatus === 'success' && <Check size={14} />}
+                    {saveStatus === 'idle' && "Save"}
+                    {saveStatus === 'saving' && "Saving..."}
+                    {saveStatus === 'success' && "Saved!"}
+                    {saveStatus === 'error' && "Error!"}
+                  </button>
                 </div>
                 <textarea
                   value={config}
