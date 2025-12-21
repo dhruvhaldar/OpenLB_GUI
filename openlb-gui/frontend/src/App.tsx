@@ -1,12 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Terminal, Play, Settings, Folder, FileText, Activity } from 'lucide-react';
-
-interface Case {
-  id: string;
-  path: string;
-  name: string;
-  domain: string;
-}
+import { useState, useEffect, useCallback } from 'react';
+import { Terminal, Play, Settings, FileText } from 'lucide-react';
+import Sidebar, { type Case } from './components/Sidebar';
 
 const API_URL = 'http://localhost:8080';
 
@@ -18,20 +12,19 @@ function App() {
   const [status, setStatus] = useState('idle'); // idle, building, running
 
   useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        const res = await fetch(`${API_URL}/cases`);
+        const data = await res.json();
+        setCases(data);
+      } catch (e) {
+        console.error('Failed to fetch cases', e);
+      }
+    };
     fetchCases();
   }, []);
 
-  const fetchCases = async () => {
-    try {
-      const res = await fetch(`${API_URL}/cases`);
-      const data = await res.json();
-      setCases(data);
-    } catch (e) {
-      console.error('Failed to fetch cases', e);
-    }
-  };
-
-  const fetchConfig = async (casePath: string) => {
+  const fetchConfig = useCallback(async (casePath: string) => {
     try {
       const res = await fetch(`${API_URL}/config?path=${encodeURIComponent(casePath)}`);
       const data = await res.json();
@@ -39,7 +32,13 @@ function App() {
     } catch (e) {
       console.error('Failed to fetch config', e);
     }
-  };
+  }, []);
+
+  const handleSelectCase = useCallback((c: Case) => {
+    setSelectedCase(c);
+    fetchConfig(c.path);
+    setOutput('');
+  }, [fetchConfig]);
 
   const saveConfig = async () => {
     if (!selectedCase) return;
@@ -50,8 +49,8 @@ function App() {
         body: JSON.stringify({ case_path: selectedCase.path, content: config })
       });
       alert('Configuration saved!');
-    } catch (e) {
-      console.error('Failed to save config', e);
+    } catch {
+      console.error('Failed to save config');
     }
   };
 
@@ -69,7 +68,7 @@ function App() {
       setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
       if (data.success) setOutput(prev => prev + '\nBuild Successful.\n');
       else setOutput(prev => prev + '\nBuild Failed.\n');
-    } catch (e) {
+    } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
     setStatus('idle');
@@ -89,7 +88,7 @@ function App() {
       setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
       if (data.success) setOutput(prev => prev + '\nRun Finished.\n');
       else setOutput(prev => prev + '\nRun Failed.\n');
-    } catch (e) {
+    } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
     setStatus('idle');
@@ -97,27 +96,11 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gray-900 text-white font-sans">
-      {/* Sidebar */}
-      <div className="w-64 bg-gray-800 p-4 border-r border-gray-700">
-        <h1 className="text-xl font-bold mb-6 flex items-center gap-2">
-          <Activity className="text-blue-500" /> OpenLB Manager
-        </h1>
-        <div className="space-y-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
-          <div className="space-y-1">
-            {cases.map(c => (
-              <button
-                key={c.id}
-                onClick={() => { setSelectedCase(c); fetchConfig(c.path); setOutput(''); }}
-                className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 ${selectedCase?.id === c.id ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-              >
-                <Folder size={16} />
-                <span className="truncate">{c.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <Sidebar
+        cases={cases}
+        selectedCase={selectedCase}
+        onSelectCase={handleSelectCase}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
