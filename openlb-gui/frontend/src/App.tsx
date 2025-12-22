@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Terminal, Play, Settings, Folder, FileText, Activity } from 'lucide-react';
+import { Terminal, Play, Settings, Folder, FileText, Activity, Loader2, Check, AlertCircle } from 'lucide-react';
 
 interface Case {
   id: string;
@@ -16,10 +16,7 @@ function App() {
   const [config, setConfig] = useState('');
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
-
-  useEffect(() => {
-    fetchCases();
-  }, []);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
   const fetchCases = async () => {
     try {
@@ -30,6 +27,10 @@ function App() {
       console.error('Failed to fetch cases', e);
     }
   };
+
+  useEffect(() => {
+    fetchCases();
+  }, []);
 
   const fetchConfig = async (casePath: string) => {
     try {
@@ -43,15 +44,19 @@ function App() {
 
   const saveConfig = async () => {
     if (!selectedCase) return;
+    setSaveStatus('saving');
     try {
       await fetch(`${API_URL}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ case_path: selectedCase.path, content: config })
       });
-      alert('Configuration saved!');
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (e) {
       console.error('Failed to save config', e);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
@@ -69,7 +74,7 @@ function App() {
       setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
       if (data.success) setOutput(prev => prev + '\nBuild Successful.\n');
       else setOutput(prev => prev + '\nBuild Failed.\n');
-    } catch (e) {
+    } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
     setStatus('idle');
@@ -89,7 +94,7 @@ function App() {
       setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
       if (data.success) setOutput(prev => prev + '\nRun Finished.\n');
       else setOutput(prev => prev + '\nRun Failed.\n');
-    } catch (e) {
+    } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
     setStatus('idle');
@@ -150,9 +155,26 @@ function App() {
                   <h3 className="font-semibold text-gray-400 flex items-center gap-2">
                     <FileText size={16} /> Configuration
                   </h3>
-                  <button onClick={saveConfig} className="text-sm text-blue-400 hover:text-blue-300">Save</button>
+                  <button
+                    onClick={saveConfig}
+                    disabled={saveStatus === 'saving'}
+                    className={`text-sm flex items-center gap-1 ${
+                      saveStatus === 'success' ? 'text-green-400' :
+                      saveStatus === 'error' ? 'text-red-400' :
+                      'text-blue-400 hover:text-blue-300'
+                    }`}
+                  >
+                    {saveStatus === 'saving' && <Loader2 className="animate-spin" size={14} />}
+                    {saveStatus === 'success' && <Check size={14} />}
+                    {saveStatus === 'error' && <AlertCircle size={14} />}
+                    {saveStatus === 'idle' && 'Save'}
+                    {saveStatus === 'success' && 'Saved'}
+                    {saveStatus === 'error' && 'Error'}
+                    {saveStatus === 'saving' && 'Saving...'}
+                  </button>
                 </div>
                 <textarea
+                  aria-label="Configuration Editor"
                   value={config}
                   onChange={e => setConfig(e.target.value)}
                   className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -164,7 +186,11 @@ function App() {
                 <h3 className="font-semibold text-gray-400 mb-2 flex items-center gap-2">
                   <Terminal size={16} /> Output
                 </h3>
-                <pre className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2">
+                <pre
+                  className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2"
+                  aria-live="polite"
+                  aria-label="Terminal Output"
+                >
                   {output}
                 </pre>
               </div>
