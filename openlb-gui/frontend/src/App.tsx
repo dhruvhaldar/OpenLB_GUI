@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Terminal, Play, Settings, Folder, FileText, Activity } from 'lucide-react';
+import { Terminal, Play, Settings, Folder, FileText, Activity, Check, AlertCircle } from 'lucide-react';
 
 interface Case {
   id: string;
@@ -16,42 +16,46 @@ function App() {
   const [config, setConfig] = useState('');
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        const res = await fetch(`${API_URL}/cases`);
+        const data = await res.json();
+        setCases(data);
+      } catch {
+        console.error('Failed to fetch cases');
+      }
+    };
     fetchCases();
   }, []);
-
-  const fetchCases = async () => {
-    try {
-      const res = await fetch(`${API_URL}/cases`);
-      const data = await res.json();
-      setCases(data);
-    } catch (e) {
-      console.error('Failed to fetch cases', e);
-    }
-  };
 
   const fetchConfig = async (casePath: string) => {
     try {
       const res = await fetch(`${API_URL}/config?path=${encodeURIComponent(casePath)}`);
       const data = await res.json();
       setConfig(data.content);
-    } catch (e) {
-      console.error('Failed to fetch config', e);
+    } catch {
+      console.error('Failed to fetch config');
     }
   };
 
   const saveConfig = async () => {
     if (!selectedCase) return;
+    setSaveStatus('saving');
     try {
       await fetch(`${API_URL}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ case_path: selectedCase.path, content: config })
       });
-      alert('Configuration saved!');
-    } catch (e) {
-      console.error('Failed to save config', e);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch {
+      console.error('Failed to save config');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
@@ -69,7 +73,7 @@ function App() {
       setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
       if (data.success) setOutput(prev => prev + '\nBuild Successful.\n');
       else setOutput(prev => prev + '\nBuild Failed.\n');
-    } catch (e) {
+    } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
     setStatus('idle');
@@ -89,7 +93,7 @@ function App() {
       setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
       if (data.success) setOutput(prev => prev + '\nRun Finished.\n');
       else setOutput(prev => prev + '\nRun Failed.\n');
-    } catch (e) {
+    } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
     setStatus('idle');
@@ -150,11 +154,32 @@ function App() {
                   <h3 className="font-semibold text-gray-400 flex items-center gap-2">
                     <FileText size={16} /> Configuration
                   </h3>
-                  <button onClick={saveConfig} className="text-sm text-blue-400 hover:text-blue-300">Save</button>
+                  <div className="flex items-center gap-3">
+                    <div role="status" aria-live="polite" className="text-sm">
+                      {saveStatus === 'saved' && (
+                        <span className="text-green-400 flex items-center gap-1 animate-pulse">
+                          <Check size={14} /> Saved!
+                        </span>
+                      )}
+                      {saveStatus === 'error' && (
+                        <span className="text-red-400 flex items-center gap-1">
+                          <AlertCircle size={14} /> Error
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={saveConfig}
+                      disabled={saveStatus === 'saving'}
+                      className="text-sm text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
+                    >
+                      {saveStatus === 'saving' ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   value={config}
                   onChange={e => setConfig(e.target.value)}
+                  aria-label="Configuration Editor"
                   className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
