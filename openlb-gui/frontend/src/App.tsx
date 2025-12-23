@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Terminal, Play, Settings, FileText } from 'lucide-react';
+import { Terminal, Play, Settings } from 'lucide-react';
 import Sidebar from './components/Sidebar';
+import ConfigEditor from './components/ConfigEditor';
 import type { Case } from './types';
 
 const API_URL = 'http://localhost:8080';
@@ -46,19 +47,19 @@ function App() {
     setOutput('');
   }, [fetchConfig]);
 
-  const saveConfig = async () => {
+  const handleSaveConfig = useCallback(async (content: string) => {
     if (!selectedCase) return;
     try {
       await fetch(`${API_URL}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ case_path: selectedCase.path, content: config })
+        body: JSON.stringify({ case_path: selectedCase.path, content })
       });
       alert('Configuration saved!');
     } catch (e) {
       console.error('Failed to save config', e);
     }
-  };
+  }, [selectedCase]);
 
   const handleBuild = async () => {
     if (!selectedCase) return;
@@ -133,20 +134,12 @@ function App() {
             </header>
 
             <div className="flex-1 flex overflow-hidden">
-              {/* Config Editor */}
-              <div className="w-1/2 p-4 flex flex-col border-r border-gray-700">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-gray-400 flex items-center gap-2">
-                    <FileText size={16} /> Configuration
-                  </h3>
-                  <button onClick={saveConfig} className="text-sm text-blue-400 hover:text-blue-300">Save</button>
-                </div>
-                <textarea
-                  value={config}
-                  onChange={e => setConfig(e.target.value)}
-                  className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+              <ConfigEditor
+                initialContent={config}
+                onSave={handleSaveConfig}
+                className="w-1/2 p-4 border-r border-gray-700"
+                key={selectedCase.id}
+              />
 
               {/* Output Terminal */}
               <div className="w-1/2 p-4 flex flex-col bg-black">
