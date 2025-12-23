@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Terminal, Play, Settings, FileText } from 'lucide-react';
+import { Terminal, Play, Settings, FileText, Loader2 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import type { Case } from './types';
 
@@ -11,6 +11,7 @@ function App() {
   const [config, setConfig] = useState('');
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   useEffect(() => {
     let ignore = false;
@@ -48,15 +49,19 @@ function App() {
 
   const saveConfig = async () => {
     if (!selectedCase) return;
+    setSaveStatus('saving');
     try {
       await fetch(`${API_URL}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ case_path: selectedCase.path, content: config })
       });
-      alert('Configuration saved!');
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (e) {
       console.error('Failed to save config', e);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
@@ -118,16 +123,20 @@ function App() {
                 <button
                   onClick={handleBuild}
                   disabled={status !== 'idle'}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={status === 'building' ? 'Building project' : 'Build project'}
                 >
-                  <Settings size={16} /> Build
+                  {status === 'building' ? <Loader2 size={16} className="animate-spin" /> : <Settings size={16} />}
+                  {status === 'building' ? 'Building...' : 'Build'}
                 </button>
                 <button
                   onClick={handleRun}
                   disabled={status !== 'idle'}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={status === 'running' ? 'Running project' : 'Run project'}
                 >
-                  <Play size={16} /> Run
+                  {status === 'running' ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                  {status === 'running' ? 'Running...' : 'Run'}
                 </button>
               </div>
             </header>
@@ -139,7 +148,14 @@ function App() {
                   <h3 className="font-semibold text-gray-400 flex items-center gap-2">
                     <FileText size={16} /> Configuration
                   </h3>
-                  <button onClick={saveConfig} className="text-sm text-blue-400 hover:text-blue-300">Save</button>
+                  <button
+                    onClick={saveConfig}
+                    disabled={saveStatus === 'saving'}
+                    className={`text-sm ${saveStatus === 'saved' ? 'text-green-400' : 'text-blue-400 hover:text-blue-300'}`}
+                    aria-label="Save configuration"
+                  >
+                    {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save'}
+                  </button>
                 </div>
                 <textarea
                   value={config}
