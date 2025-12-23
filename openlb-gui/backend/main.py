@@ -19,7 +19,29 @@ app.add_middleware(
 
 # Resolve cases directory relative to the project root (2 levels up from backend/main.py)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-CASES_DIR = str(PROJECT_ROOT / "my_cases")
+# Use resolve() for CASES_DIR to ensure we have the absolute path
+CASES_PATH = (PROJECT_ROOT / "my_cases").resolve()
+# Keep CASES_DIR as string for glob/compat but use CASES_PATH for security checks
+CASES_DIR = str(CASES_PATH)
+
+def validate_case_path(path_str: str) -> str:
+    """
+    Validates that the path is within the CASES_DIR.
+    Returns the absolute path as a string if valid.
+    Raises HTTPException if invalid.
+    """
+    try:
+        # Resolve the input path to handle '..' and symlinks
+        target_path = Path(path_str).resolve()
+
+        # Check if the path is relative to CASES_PATH
+        if not target_path.is_relative_to(CASES_PATH):
+             raise HTTPException(status_code=403, detail="Access denied")
+
+        return str(target_path)
+    except (ValueError, RuntimeError):
+        # Handle cases where is_relative_to might fail or other path errors
+        raise HTTPException(status_code=403, detail="Access denied")
 
 class CommandRequest(BaseModel):
     case_path: str
@@ -51,18 +73,16 @@ def list_cases():
 def build_case(req: CommandRequest):
     """Executes 'make' in the directory."""
     # Security check
-    abs_path = os.path.abspath(req.case_path)
-    if not abs_path.startswith(CASES_DIR):
-         raise HTTPException(status_code=403, detail="Access denied")
+    safe_path = validate_case_path(req.case_path)
 
-    if not os.path.exists(req.case_path):
+    if not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail="Case path not found")
 
     try:
         # Run make
         result = subprocess.run(
             ["make"],
-            cwd=req.case_path,
+            cwd=safe_path,
             capture_output=True,
             text=True,
             check=False
@@ -79,11 +99,9 @@ def build_case(req: CommandRequest):
 def run_case(req: CommandRequest):
     """Executes 'make run' in the directory."""
     # Security check
-    abs_path = os.path.abspath(req.case_path)
-    if not abs_path.startswith(CASES_DIR):
-         raise HTTPException(status_code=403, detail="Access denied")
+    safe_path = validate_case_path(req.case_path)
 
-    if not os.path.exists(req.case_path):
+    if not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail="Case path not found")
 
     try:
@@ -97,7 +115,7 @@ def run_case(req: CommandRequest):
 
         result = subprocess.run(
             ["make", "run"],
-            cwd=req.case_path,
+            cwd=safe_path,
             capture_output=True,
             text=True,
             check=False
@@ -114,11 +132,9 @@ def run_case(req: CommandRequest):
 def get_config(path: str):
     """Reads the config.xml file."""
     # Validate path is within CASES_DIR for security
-    abs_path = os.path.abspath(path)
-    if not abs_path.startswith(CASES_DIR):
-         raise HTTPException(status_code=403, detail="Access denied")
+    safe_path = validate_case_path(path)
 
-    config_path = os.path.join(abs_path, "config.xml")
+    config_path = os.path.join(safe_path, "config.xml")
     if not os.path.exists(config_path):
         return {"content": ""}
 
@@ -128,11 +144,9 @@ def get_config(path: str):
 @app.post("/config")
 def save_config(req: ConfigRequest):
     """Writes the config.xml file."""
-    abs_path = os.path.abspath(req.case_path)
-    if not abs_path.startswith(CASES_DIR):
-         raise HTTPException(status_code=403, detail="Access denied")
+    safe_path = validate_case_path(req.case_path)
 
-    config_path = os.path.join(abs_path, "config.xml")
+    config_path = os.path.join(safe_path, "config.xml")
     with open(config_path, "w") as f:
         f.write(req.content)
     return {"success": True}
