@@ -55,8 +55,9 @@ class ConfigRequest(BaseModel):
 def list_cases():
     """Scans for directories with a Makefile in my_cases."""
     cases = []
-    # Recursively find Makefiles
-    makefiles = glob.glob(f"{CASES_DIR}/**/Makefile", recursive=True)
+    # Find Makefiles at depth 1 and 2 (e.g., Case/Makefile and Domain/Case/Makefile)
+    # Using explicit depths instead of recursive=True avoids scanning large output directories
+    makefiles = glob.glob(f"{CASES_DIR}/*/Makefile") + glob.glob(f"{CASES_DIR}/*/*/Makefile")
     for mk in makefiles:
         path = os.path.dirname(mk)
         rel_path = os.path.relpath(path, CASES_DIR)
