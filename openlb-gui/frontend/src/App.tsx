@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Terminal, Play, Settings } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import type { Case } from './types';
@@ -9,7 +9,7 @@ const API_URL = 'http://localhost:8080';
 function App() {
   const [cases, setCases] = useState<Case[]>([]);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
-  const [config, setConfig] = useState('');
+  const [config, setConfig] = useState<string | null>(null);
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
 
@@ -43,6 +43,7 @@ function App() {
 
   const handleSelectCase = useCallback((c: Case) => {
     setSelectedCase(c);
+    setConfig(null); // Reset config to trigger loading state
     fetchConfig(c.path);
     setOutput('');
   }, [fetchConfig]);
@@ -135,12 +136,18 @@ function App() {
             </header>
 
             <div className="flex-1 flex overflow-hidden">
-              <ConfigEditor
-                initialContent={config}
-                onSave={handleSaveConfig}
-                className="w-1/2 p-4 border-r border-gray-700"
-                key={selectedCase.id}
-              />
+              {config !== null ? (
+                <ConfigEditor
+                  initialContent={config}
+                  onSave={handleSaveConfig}
+                  className="w-1/2 p-4 border-r border-gray-700"
+                  key={selectedCase.id}
+                />
+              ) : (
+                <div className="w-1/2 p-4 border-r border-gray-700 flex items-center justify-center text-gray-500">
+                  <Loader2 className="animate-spin mr-2" /> Loading config...
+                </div>
+              )}
 
               {/* Output Terminal */}
               <div className="w-1/2 p-4 flex flex-col bg-black">
