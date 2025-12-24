@@ -1,5 +1,5 @@
 import React, { memo, useState, useEffect } from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, Save, Check, Loader2 } from 'lucide-react';
 
 interface ConfigEditorProps {
   initialContent: string;
@@ -9,14 +9,23 @@ interface ConfigEditorProps {
 
 const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className }) => {
   const [content, setContent] = useState(initialContent);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  // Sync state if initialContent changes (e.g. from fetching a new case)
   useEffect(() => {
-    setContent(initialContent);
-  }, [initialContent]);
+    if (saveStatus === 'saved') {
+      const timer = setTimeout(() => setSaveStatus('idle'), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveStatus]);
 
   const handleSave = async () => {
-    await onSave(content);
+    setSaveStatus('saving');
+    try {
+      await onSave(content);
+      setSaveStatus('saved');
+    } catch {
+      setSaveStatus('error');
+    }
   };
 
   return (
@@ -27,9 +36,23 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
         </h3>
         <button
           onClick={handleSave}
-          className="text-sm text-blue-400 hover:text-blue-300"
+          disabled={saveStatus === 'saving'}
+          className={`text-sm flex items-center gap-2 px-3 py-1 rounded transition-colors ${
+            saveStatus === 'saved'
+              ? 'text-green-400 hover:text-green-300'
+              : saveStatus === 'error'
+              ? 'text-red-400 hover:text-red-300'
+              : 'text-blue-400 hover:text-blue-300 hover:bg-gray-800'
+          }`}
         >
-          Save
+          {saveStatus === 'saving' ? (
+            <Loader2 className="animate-spin" size={14} />
+          ) : saveStatus === 'saved' ? (
+            <Check size={14} />
+          ) : (
+            <Save size={14} />
+          )}
+          {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Error' : 'Save'}
         </button>
       </div>
       <textarea
