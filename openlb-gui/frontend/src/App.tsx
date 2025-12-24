@@ -50,14 +50,15 @@ function App() {
   const handleSaveConfig = useCallback(async (content: string) => {
     if (!selectedCase) return;
     try {
-      await fetch(`${API_URL}/config`, {
+      const res = await fetch(`${API_URL}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ case_path: selectedCase.path, content })
       });
-      alert('Configuration saved!');
+      if (!res.ok) throw new Error('Failed to save');
     } catch (e) {
       console.error('Failed to save config', e);
+      throw e;
     }
   }, [selectedCase]);
 
