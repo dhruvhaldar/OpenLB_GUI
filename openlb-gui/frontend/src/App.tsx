@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Terminal, Play, Settings } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import type { Case } from './types';
@@ -122,14 +122,24 @@ function App() {
                   disabled={status !== 'idle'}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Settings size={16} /> Build
+                  {status === 'building' ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Settings size={16} />
+                  )}
+                  {status === 'building' ? 'Building...' : 'Build'}
                 </button>
                 <button
                   onClick={handleRun}
                   disabled={status !== 'idle'}
                   className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Play size={16} /> Run
+                  {status === 'running' ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Play size={16} />
+                  )}
+                  {status === 'running' ? 'Running...' : 'Run'}
                 </button>
               </div>
             </header>
