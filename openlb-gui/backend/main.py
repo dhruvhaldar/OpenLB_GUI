@@ -1,10 +1,18 @@
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import os
 import subprocess
 import glob
+import logging
 from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("openlb-backend")
 
 app = FastAPI()
 
@@ -37,11 +45,15 @@ def validate_case_path(path_str: str) -> str:
 
         # Check if the path is relative to CASES_PATH
         if not target_path.is_relative_to(CASES_PATH):
+             # Use repr() to prevent log injection
+             logger.warning(f"Access denied for path: {repr(path_str)}")
              raise HTTPException(status_code=403, detail="Access denied")
 
         return str(target_path)
     except (ValueError, RuntimeError):
         # Handle cases where is_relative_to might fail or other path errors
+        # Use repr() to prevent log injection
+        logger.error(f"Error validating path: {repr(path_str)}")
         raise HTTPException(status_code=403, detail="Access denied")
 
 class CommandRequest(BaseModel):
@@ -51,9 +63,17 @@ class ConfigRequest(BaseModel):
     case_path: str
     content: str
 
+    @field_validator('content')
+    def validate_content_length(cls, v):
+        # Limit content size to 1MB to prevent DoS
+        if len(v) > 1024 * 1024:
+            raise ValueError('Content size exceeds 1MB limit')
+        return v
+
 @app.get("/cases")
 def list_cases():
     """Scans for directories with a Makefile in my_cases."""
+    logger.info("Listing cases")
     cases = []
     # Find Makefiles at depth 1 and 2 (e.g., Case/Makefile and Domain/Case/Makefile)
     # Using explicit depths instead of recursive=True avoids scanning large output directories
@@ -76,8 +96,10 @@ def build_case(req: CommandRequest):
     """Executes 'make' in the directory."""
     # Security check
     safe_path = validate_case_path(req.case_path)
+    logger.info(f"Building case: {safe_path}")
 
     if not os.path.exists(safe_path):
+        logger.warning(f"Case path not found: {safe_path}")
         raise HTTPException(status_code=404, detail="Case path not found")
 
     try:
@@ -95,6 +117,7 @@ def build_case(req: CommandRequest):
             "stderr": result.stderr
         }
     except Exception as e:
+        logger.error(f"Build failed: {e}")
         return {"success": False, "error": str(e)}
 
 @app.post("/run")
@@ -102,8 +125,10 @@ def run_case(req: CommandRequest):
     """Executes 'make run' in the directory."""
     # Security check
     safe_path = validate_case_path(req.case_path)
+    logger.info(f"Running case: {safe_path}")
 
     if not os.path.exists(safe_path):
+        logger.warning(f"Case path not found: {safe_path}")
         raise HTTPException(status_code=404, detail="Case path not found")
 
     try:
@@ -128,6 +153,7 @@ def run_case(req: CommandRequest):
             "stderr": result.stderr
         }
     except Exception as e:
+        logger.error(f"Run failed: {e}")
         return {"success": False, "error": str(e)}
 
 @app.get("/config")
@@ -135,9 +161,11 @@ def get_config(path: str):
     """Reads the config.xml file."""
     # Validate path is within CASES_DIR for security
     safe_path = validate_case_path(path)
+    logger.info(f"Reading config for: {safe_path}")
 
     config_path = os.path.join(safe_path, "config.xml")
     if not os.path.exists(config_path):
+        logger.warning(f"Config not found: {config_path}")
         return {"content": ""}
 
     with open(config_path, "r") as f:
@@ -147,6 +175,7 @@ def get_config(path: str):
 def save_config(req: ConfigRequest):
     """Writes the config.xml file."""
     safe_path = validate_case_path(req.case_path)
+    logger.info(f"Saving config for: {safe_path} (size: {len(req.content)} bytes)")
 
     config_path = os.path.join(safe_path, "config.xml")
     with open(config_path, "w") as f:
