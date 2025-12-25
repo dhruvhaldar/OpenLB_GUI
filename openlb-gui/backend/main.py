@@ -5,6 +5,7 @@ import os
 import subprocess
 import glob
 import logging
+import tempfile
 from pathlib import Path
 
 # Configure logging
@@ -104,19 +105,29 @@ def build_case(req: CommandRequest):
 
     try:
         # Run make
-        result = subprocess.run(
-            ["make"],
-            cwd=safe_path,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=300  # 5 minute timeout
-        )
-        return {
-            "success": result.returncode == 0,
-            "stdout": result.stdout,
-            "stderr": result.stderr
-        }
+        # Use a temporary file to capture output to avoid memory exhaustion (DoS)
+        with tempfile.TemporaryFile(mode='w+') as tmp:
+            result = subprocess.run(
+                ["make"],
+                cwd=safe_path,
+                stdout=tmp,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+                timeout=300  # 5 minute timeout
+            )
+
+            # Read back only a safe amount of output
+            tmp.seek(0)
+            output = tmp.read(512 * 1024) # 512KB limit
+            if tmp.read(1):
+                output += "\n[Output truncated due to size limit]"
+
+            return {
+                "success": result.returncode == 0,
+                "stdout": output,
+                "stderr": "" # stderr is merged into stdout
+            }
     except subprocess.TimeoutExpired:
         logger.error(f"Build timed out for {safe_path}")
         return {"success": False, "error": "Build timed out (limit: 5 minutes)"}
@@ -137,26 +148,29 @@ def run_case(req: CommandRequest):
 
     try:
         # Run make run
-        # Using subprocess.Popen could be better for streaming, but for now we capture output
-        # Or better yet, we can stream the output if we use websockets, but for simplicity
-        # let's just return the output.
-        # Wait, long running simulations...
-        # For a production app, we would background this and stream logs.
-        # For this prototype, I will just run it and return output.
+        # Use a temporary file to capture output to avoid memory exhaustion (DoS)
+        with tempfile.TemporaryFile(mode='w+') as tmp:
+            result = subprocess.run(
+                ["make", "run"],
+                cwd=safe_path,
+                stdout=tmp,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+                timeout=600  # 10 minute timeout
+            )
 
-        result = subprocess.run(
-            ["make", "run"],
-            cwd=safe_path,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=600  # 10 minute timeout
-        )
-        return {
-            "success": result.returncode == 0,
-            "stdout": result.stdout,
-            "stderr": result.stderr
-        }
+            # Read back only a safe amount of output
+            tmp.seek(0)
+            output = tmp.read(512 * 1024) # 512KB limit
+            if tmp.read(1):
+                output += "\n[Output truncated due to size limit]"
+
+            return {
+                "success": result.returncode == 0,
+                "stdout": output,
+                "stderr": "" # stderr is merged into stdout
+            }
     except subprocess.TimeoutExpired:
         logger.error(f"Run timed out for {safe_path}")
         return {"success": False, "error": "Simulation timed out (limit: 10 minutes)"}
