@@ -109,13 +109,17 @@ def build_case(req: CommandRequest):
             cwd=safe_path,
             capture_output=True,
             text=True,
-            check=False
+            check=False,
+            timeout=300  # 5 minute timeout
         )
         return {
             "success": result.returncode == 0,
             "stdout": result.stdout,
             "stderr": result.stderr
         }
+    except subprocess.TimeoutExpired:
+        logger.error(f"Build timed out for {safe_path}")
+        return {"success": False, "error": "Build timed out (limit: 5 minutes)"}
     except Exception as e:
         logger.error(f"Build failed: {e}")
         return {"success": False, "error": str(e)}
@@ -145,13 +149,17 @@ def run_case(req: CommandRequest):
             cwd=safe_path,
             capture_output=True,
             text=True,
-            check=False
+            check=False,
+            timeout=600  # 10 minute timeout
         )
         return {
             "success": result.returncode == 0,
             "stdout": result.stdout,
             "stderr": result.stderr
         }
+    except subprocess.TimeoutExpired:
+        logger.error(f"Run timed out for {safe_path}")
+        return {"success": False, "error": "Simulation timed out (limit: 10 minutes)"}
     except Exception as e:
         logger.error(f"Run failed: {e}")
         return {"success": False, "error": str(e)}

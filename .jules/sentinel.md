@@ -7,3 +7,8 @@
 **Vulnerability:** The `save_config` endpoint accepted unlimited string content, allowing a malicious user to fill the disk by sending a massive payload, leading to Denial of Service.
 **Learning:** Pydantic models by default validate types but not content constraints (like length). Explicit validators are needed for resource protection.
 **Prevention:** Use Pydantic's `@field_validator` or `constr` (constrained string) to enforce maximum length limits on all user-supplied content that is stored or processed. Added logging to better monitor such attempts.
+
+## 2024-05-23 - Denial of Service via Subprocess Timeout
+**Vulnerability:** The `/build` and `/run` endpoints executed `subprocess.run` without a `timeout` argument. A malicious or buggy simulation case could hang indefinitely, tying up server resources and leading to Denial of Service.
+**Learning:** External process execution in synchronous endpoints must always have a timeout to prevent infinite blocking.
+**Prevention:** Always pass the `timeout` argument to `subprocess.run`, catch `subprocess.TimeoutExpired`, and handle the error gracefully to ensure server availability.
