@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Terminal, Play, Settings, Loader2 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
@@ -12,6 +12,9 @@ function App() {
   const [config, setConfig] = useState<string | null>(null);
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
+
+  // Optimization: Cache config content to avoid unnecessary network requests
+  const configCache = useRef<Record<string, string>>({});
 
   useEffect(() => {
     let ignore = false;
@@ -32,10 +35,18 @@ function App() {
 
 
   const fetchConfig = useCallback(async (casePath: string) => {
+    // Optimization: Check cache first
+    if (configCache.current[casePath]) {
+      setConfig(configCache.current[casePath]);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/config?path=${encodeURIComponent(casePath)}`);
       const data = await res.json();
       setConfig(data.content);
+      // Optimization: Update cache
+      configCache.current[casePath] = data.content;
     } catch (e) {
       console.error('Failed to fetch config', e);
     }
@@ -43,7 +54,11 @@ function App() {
 
   const handleSelectCase = useCallback((c: Case) => {
     setSelectedCase(c);
-    setConfig(null); // Reset config to trigger loading state
+    // Optimization: If cached, we don't need to reset to null and flash loader
+    // fetchConfig will handle setting the state.
+    if (!configCache.current[c.path]) {
+      setConfig(null); // Reset config to trigger loading state only if not cached
+    }
     fetchConfig(c.path);
     setOutput('');
   }, [fetchConfig]);
@@ -57,6 +72,8 @@ function App() {
         body: JSON.stringify({ case_path: selectedCase.path, content })
       });
       if (!res.ok) throw new Error('Failed to save');
+      // Optimization: Update cache on save
+      configCache.current[selectedCase.path] = content;
     } catch (e) {
       console.error('Failed to save config', e);
       throw e;
