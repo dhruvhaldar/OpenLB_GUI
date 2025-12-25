@@ -28,15 +28,24 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
   return (
     <div className={`flex flex-col ${className || ''}`}>
       <div className="flex justify-between items-center mb-2">
-        <h3 className="font-semibold text-gray-400 flex items-center gap-2">
+        <h3 id="config-editor-title" className="font-semibold text-gray-400 flex items-center gap-2">
           <FileText size={16} /> Configuration
         </h3>
         <button
           onClick={handleSave}
           disabled={saveStatus === 'saving'}
+          title="Save (Ctrl+S)"
+          aria-keyshortcuts="Control+S"
           className={`text-sm flex items-center gap-2 px-3 py-1 rounded transition-colors ${
             saveStatus === 'saved'
               ? 'text-green-400 hover:text-green-300'
@@ -56,8 +65,10 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
         </button>
       </div>
       <textarea
+        aria-labelledby="config-editor-title"
         value={content}
         onChange={(e) => setContent(e.target.value)}
+        onKeyDown={handleKeyDown}
         className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
     </div>
