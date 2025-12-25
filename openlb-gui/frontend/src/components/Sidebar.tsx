@@ -21,7 +21,9 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase }
             <button
               key={c.id}
               onClick={() => onSelectCase(c)}
-              className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 ${selectedCaseId === c.id ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+              title={c.name}
+              aria-current={selectedCaseId === c.id ? 'true' : undefined}
+              className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${selectedCaseId === c.id ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
             >
               <Folder size={16} />
               <span className="truncate">{c.name}</span>
