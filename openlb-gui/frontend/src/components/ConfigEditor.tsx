@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { FileText, Save, Check, Loader2 } from 'lucide-react';
 
 interface ConfigEditorProps {
@@ -8,7 +8,9 @@ interface ConfigEditorProps {
 }
 
 const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className }) => {
-  const [content, setContent] = useState(initialContent);
+  // Optimization: Use uncontrolled component to avoid re-renders on every keystroke.
+  // This significantly improves typing performance for large configuration files.
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   useEffect(() => {
@@ -19,6 +21,9 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
   }, [saveStatus]);
 
   const handleSave = async () => {
+    if (!textareaRef.current) return;
+    const content = textareaRef.current.value;
+
     setSaveStatus('saving');
     try {
       await onSave(content);
@@ -65,9 +70,9 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
         </button>
       </div>
       <textarea
+        ref={textareaRef}
         aria-labelledby="config-editor-title"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
+        defaultValue={initialContent}
         onKeyDown={handleKeyDown}
         className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
