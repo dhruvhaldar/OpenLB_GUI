@@ -12,3 +12,8 @@
 **Vulnerability:** The `/build` and `/run` endpoints executed `subprocess.run` without a `timeout` argument. A malicious or buggy simulation case could hang indefinitely, tying up server resources and leading to Denial of Service.
 **Learning:** External process execution in synchronous endpoints must always have a timeout to prevent infinite blocking.
 **Prevention:** Always pass the `timeout` argument to `subprocess.run`, catch `subprocess.TimeoutExpired`, and handle the error gracefully to ensure server availability.
+
+## 2024-05-23 - XXE Prevention in Config Upload
+**Vulnerability:** The `save_config` endpoint allowed uploading XML files containing DTDs (`<!DOCTYPE>`) and Entity definitions (`<!ENTITY>`). If the underlying C++ XML parser is vulnerable to XXE, this could lead to local file disclosure or SSRF.
+**Learning:** Even if the direct backend doesn't parse XML, uploading malicious content for other components to consume is a security risk. Input validation should occur at the earliest entry point.
+**Prevention:** Added a Pydantic validator to scan for and reject `<!DOCTYPE` and `<!ENTITY` patterns in user-supplied XML content before saving it to disk.

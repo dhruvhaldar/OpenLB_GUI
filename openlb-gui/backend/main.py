@@ -72,6 +72,15 @@ class ConfigRequest(BaseModel):
         # Limit content size to 1MB to prevent DoS
         if len(v) > 1024 * 1024:
             raise ValueError('Content size exceeds 1MB limit')
+
+        # Security: Prevent XXE attacks by rejecting DTDs and Entity definitions
+        # This protects the backend (if it parses XML) and the C++ simulation engine
+        # from XML External Entity attacks that could read local files.
+        forbidden_patterns = ['<!DOCTYPE', '<!ENTITY']
+        for pattern in forbidden_patterns:
+            if pattern in v:
+                raise ValueError(f'Potentially unsafe XML content detected ({pattern})')
+
         return v
 
 @app.get("/cases")
