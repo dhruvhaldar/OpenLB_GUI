@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Terminal, Play, Settings, Loader2 } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2, Clipboard, Check } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import type { Case } from './types';
@@ -12,6 +12,7 @@ function App() {
   const [config, setConfig] = useState<string | null>(null);
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
+  const [copied, setCopied] = useState(false);
 
   // Optimization: Cache config content to avoid unnecessary network requests
   const configCache = useRef<Record<string, string>>({});
@@ -120,6 +121,12 @@ function App() {
     setStatus('idle');
   };
 
+  const handleCopyOutput = () => {
+    navigator.clipboard.writeText(output);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="flex h-screen bg-gray-900 text-white font-sans">
       <Sidebar
@@ -178,10 +185,25 @@ function App() {
 
               {/* Output Terminal */}
               <div className="w-1/2 p-4 flex flex-col bg-black">
-                <h3 className="font-semibold text-gray-400 mb-2 flex items-center gap-2">
-                  <Terminal size={16} /> Output
-                </h3>
-                <pre className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 id="output-title" className="font-semibold text-gray-400 flex items-center gap-2">
+                    <Terminal size={16} /> Output
+                  </h3>
+                  <button
+                    onClick={handleCopyOutput}
+                    className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-800"
+                    aria-label={copied ? "Copied to clipboard" : "Copy output to clipboard"}
+                    title="Copy Output"
+                  >
+                    {copied ? <Check size={16} className="text-green-500" /> : <Clipboard size={16} />}
+                  </button>
+                </div>
+                <pre
+                  className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  tabIndex={0}
+                  role="log"
+                  aria-labelledby="output-title"
+                >
                   {output}
                 </pre>
               </div>
