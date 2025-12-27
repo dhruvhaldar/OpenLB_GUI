@@ -29,6 +29,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Resolve cases directory relative to the project root (2 levels up from backend/main.py)
@@ -200,6 +207,16 @@ def get_config(path: str):
     if not os.path.exists(config_path):
         logger.warning(f"Config not found: {config_path}")
         return {"content": ""}
+
+    # Check file size to prevent DoS (memory exhaustion)
+    try:
+        file_size = os.path.getsize(config_path)
+        if file_size > 1024 * 1024:  # 1MB limit
+            logger.warning(f"Config file too large ({file_size} bytes): {config_path}")
+            raise HTTPException(status_code=413, detail="File too large (limit 1MB)")
+    except OSError as e:
+        logger.error(f"Error checking config file size: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     with open(config_path, "r") as f:
         return {"content": f.read()}
