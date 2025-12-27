@@ -12,3 +12,8 @@
 **Vulnerability:** The `/build` and `/run` endpoints executed `subprocess.run` without a `timeout` argument. A malicious or buggy simulation case could hang indefinitely, tying up server resources and leading to Denial of Service.
 **Learning:** External process execution in synchronous endpoints must always have a timeout to prevent infinite blocking.
 **Prevention:** Always pass the `timeout` argument to `subprocess.run`, catch `subprocess.TimeoutExpired`, and handle the error gracefully to ensure server availability.
+
+## 2024-05-24 - Denial of Service via Config Read
+**Vulnerability:** The `get_config` endpoint read arbitrary sized files into memory if they existed within the allowed directory. A large file (created externally or before limits) could cause OOM crashes.
+**Learning:** Reading files into memory is dangerous even if the path is valid. File size must be checked before reading, or stream processing with limits must be used.
+**Prevention:** Check `os.path.getsize()` before opening files for read, or use a streaming response with a maximum read limit. Added `X-Content-Type-Options: nosniff` as a defense-in-depth measure.
