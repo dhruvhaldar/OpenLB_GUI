@@ -5,6 +5,7 @@ from pydantic import BaseModel, field_validator
 import os
 import subprocess
 import glob
+import re
 import logging
 import tempfile
 from pathlib import Path
@@ -68,10 +69,16 @@ class ConfigRequest(BaseModel):
     content: str
 
     @field_validator('content')
-    def validate_content_length(cls, v):
+    def validate_content(cls, v):
         # Limit content size to 1MB to prevent DoS
         if len(v) > 1024 * 1024:
             raise ValueError('Content size exceeds 1MB limit')
+
+        # Prevent XXE attacks by rejecting DTD definitions
+        # This blocks both <!DOCTYPE> and <!ENTITY> declarations
+        if re.search(r'<!(?:DOCTYPE|ENTITY)', v, re.IGNORECASE):
+            raise ValueError('XML DTDs/Entities are not allowed for security reasons')
+
         return v
 
 @app.get("/cases")

