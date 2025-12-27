@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Terminal, Play, Settings, Loader2 } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2, Copy, Check } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import type { Case } from './types';
@@ -12,6 +12,7 @@ function App() {
   const [config, setConfig] = useState<string | null>(null);
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
+  const [copyStatus, setCopyStatus] = useState('idle');
 
   // Optimization: Cache config content to avoid unnecessary network requests
   const configCache = useRef<Record<string, string>>({});
@@ -120,6 +121,17 @@ function App() {
     setStatus('idle');
   };
 
+  const handleCopyOutput = async () => {
+    if (!output) return;
+    try {
+      await navigator.clipboard.writeText(output);
+      setCopyStatus('copied');
+      setTimeout(() => setCopyStatus('idle'), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-900 text-white font-sans">
       <Sidebar
@@ -178,10 +190,31 @@ function App() {
 
               {/* Output Terminal */}
               <div className="w-1/2 p-4 flex flex-col bg-black">
-                <h3 className="font-semibold text-gray-400 mb-2 flex items-center gap-2">
-                  <Terminal size={16} /> Output
-                </h3>
-                <pre className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-gray-400 flex items-center gap-2">
+                    <Terminal size={16} /> Output
+                  </h3>
+                  <button
+                    onClick={handleCopyOutput}
+                    disabled={!output}
+                    className="text-xs flex items-center gap-1 text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors focus-visible:ring-2 focus-visible:ring-gray-400 rounded px-1"
+                    title="Copy to clipboard"
+                    aria-label="Copy output to clipboard"
+                  >
+                    {copyStatus === 'copied' ? (
+                      <Check size={14} />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                    {copyStatus === 'copied' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <pre
+                  className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  role="log"
+                  aria-label="Terminal output"
+                  tabIndex={0}
+                >
                   {output}
                 </pre>
               </div>
