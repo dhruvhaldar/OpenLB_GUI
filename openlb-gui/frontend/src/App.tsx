@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Terminal, Play, Settings, Loader2, Copy, Check } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import type { Case } from './types';
@@ -214,8 +214,14 @@ function App() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            Select a case to begin
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
+            <div className="p-4 bg-gray-800 rounded-full">
+              <FolderOpen size={48} className="text-gray-600" aria-hidden="true" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-300">No Case Selected</h3>
+              <p className="text-sm mt-1 text-gray-400">Select a simulation case from the sidebar to begin.</p>
+            </div>
           </div>
         )}
       </div>
