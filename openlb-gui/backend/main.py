@@ -7,6 +7,7 @@ import subprocess
 import glob
 import logging
 import tempfile
+import re
 from pathlib import Path
 
 # Configure logging
@@ -72,6 +73,13 @@ class ConfigRequest(BaseModel):
         # Limit content size to 1MB to prevent DoS
         if len(v) > 1024 * 1024:
             raise ValueError('Content size exceeds 1MB limit')
+
+        # XXE Prevention: Reject DTD declarations
+        # If the backend or simulation parses this XML, DTDs enable XXE attacks
+        # Use regex to catch variations with whitespace
+        if re.search(r'<!\s*DOCTYPE', v, re.IGNORECASE) or re.search(r'<!\s*ENTITY', v, re.IGNORECASE):
+            raise ValueError('XML Document Type Definitions (DTD) are not allowed for security reasons')
+
         return v
 
 @app.get("/cases")
