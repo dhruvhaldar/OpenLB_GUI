@@ -17,3 +17,8 @@
 **Vulnerability:** The `get_config` endpoint read arbitrary sized files into memory if they existed within the allowed directory. A large file (created externally or before limits) could cause OOM crashes.
 **Learning:** Reading files into memory is dangerous even if the path is valid. File size must be checked before reading, or stream processing with limits must be used.
 **Prevention:** Check `os.path.getsize()` before opening files for read, or use a streaming response with a maximum read limit. Added `X-Content-Type-Options: nosniff` as a defense-in-depth measure.
+
+## 2024-05-24 - Resource Exhaustion via Concurrent Simulations
+**Vulnerability:** The `/build` and `/run` endpoints allowed multiple concurrent executions of resource-intensive `make` commands. This could lead to server resource exhaustion (CPU/RAM DoS).
+**Learning:** Even with timeouts, allowing unlimited concurrent heavy processes is a denial-of-service vector. Synchronous endpoints in threading-based servers (like Uvicorn/FastAPI default) run in parallel threads.
+**Prevention:** Implement a global `threading.Lock` (or semaphore) to serialize or limit access to heavy resources. Reject excess requests with HTTP 409 (Conflict) to signal the client to wait.
