@@ -10,15 +10,17 @@ interface SidebarItemProps {
 
 const SidebarItem = memo(({ item, isSelected, onSelect }: SidebarItemProps) => {
   return (
-    <button
-      onClick={() => onSelect(item)}
-      title={item.name}
-      aria-current={isSelected ? 'true' : undefined}
-      className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-    >
-      <Folder size={16} />
-      <span className="truncate">{item.name}</span>
-    </button>
+    <li>
+      <button
+        onClick={() => onSelect(item)}
+        title={item.name}
+        aria-current={isSelected ? 'true' : undefined}
+        className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+      >
+        <Folder size={16} />
+        <span className="truncate">{item.name}</span>
+      </button>
+    </li>
   );
 });
 
@@ -35,17 +37,21 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase }
         <Activity className="text-blue-500" /> OpenLB Manager
       </h1>
       <div className="space-y-4">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
-        <div className="space-y-1">
-          {cases.map(c => (
-            <SidebarItem
-              key={c.id}
-              item={c}
-              isSelected={selectedCaseId === c.id}
-              onSelect={onSelectCase}
-            />
-          ))}
-        </div>
+        <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
+        <ul className="space-y-1" aria-labelledby="cases-heading">
+          {cases.length > 0 ? (
+            cases.map(c => (
+              <SidebarItem
+                key={c.id}
+                item={c}
+                isSelected={selectedCaseId === c.id}
+                onSelect={onSelectCase}
+              />
+            ))
+          ) : (
+            <li className="text-sm text-gray-500 italic px-3 py-2">No cases found</li>
+          )}
+        </ul>
       </div>
     </div>
   );
