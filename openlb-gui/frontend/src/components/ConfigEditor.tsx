@@ -10,6 +10,21 @@ interface ConfigEditorProps {
 const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [prevInitialContent, setPrevInitialContent] = useState(initialContent);
+
+  // Derived state pattern: Reset status when initialContent changes
+  if (initialContent !== prevInitialContent) {
+    setPrevInitialContent(initialContent);
+    setSaveStatus('idle');
+  }
+
+  // Optimization: Update textarea DOM node directly when initialContent changes
+  // to allows reusing the component without unmounting/remounting
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.value = initialContent;
+    }
+  }, [initialContent]);
 
   useEffect(() => {
     if (saveStatus === 'saved') {
