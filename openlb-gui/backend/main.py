@@ -8,6 +8,7 @@ import glob
 import logging
 import tempfile
 import re
+import threading
 from pathlib import Path
 
 # Configure logging
@@ -44,6 +45,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CASES_PATH = (PROJECT_ROOT / "my_cases").resolve()
 # Keep CASES_DIR as string for glob/compat but use CASES_PATH for security checks
 CASES_DIR = str(CASES_PATH)
+
+# Global lock to prevent concurrent build/run operations
+# This prevents Resource Exhaustion DoS and file corruption
+execution_lock = threading.Lock()
 
 def validate_case_path(path_str: str) -> str:
     """
@@ -113,88 +118,102 @@ def list_cases():
 @app.post("/build")
 def build_case(req: CommandRequest):
     """Executes 'make' in the directory."""
-    # Security check
-    safe_path = validate_case_path(req.case_path)
-    logger.info(f"Building case: {safe_path}")
-
-    if not os.path.exists(safe_path):
-        logger.warning(f"Case path not found: {safe_path}")
-        raise HTTPException(status_code=404, detail="Case path not found")
+    # Enforce concurrency limit to prevent resource exhaustion
+    if not execution_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Another build or run is already in progress")
 
     try:
-        # Run make
-        # Use a temporary file to capture output to avoid memory exhaustion (DoS)
-        with tempfile.TemporaryFile(mode='w+') as tmp:
-            result = subprocess.run(
-                ["make"],
-                cwd=safe_path,
-                stdout=tmp,
-                stderr=subprocess.STDOUT,
-                text=True,
-                check=False,
-                timeout=300  # 5 minute timeout
-            )
+        # Security check
+        safe_path = validate_case_path(req.case_path)
+        logger.info(f"Building case: {safe_path}")
 
-            # Read back only a safe amount of output
-            tmp.seek(0)
-            output = tmp.read(512 * 1024) # 512KB limit
-            if tmp.read(1):
-                output += "\n[Output truncated due to size limit]"
+        if not os.path.exists(safe_path):
+            logger.warning(f"Case path not found: {safe_path}")
+            raise HTTPException(status_code=404, detail="Case path not found")
 
-            return {
-                "success": result.returncode == 0,
-                "stdout": output,
-                "stderr": "" # stderr is merged into stdout
-            }
-    except subprocess.TimeoutExpired:
-        logger.error(f"Build timed out for {safe_path}")
-        return {"success": False, "error": "Build timed out (limit: 5 minutes)"}
-    except Exception as e:
-        logger.error(f"Build failed: {e}")
-        return {"success": False, "error": str(e)}
+        try:
+            # Run make
+            # Use a temporary file to capture output to avoid memory exhaustion (DoS)
+            with tempfile.TemporaryFile(mode='w+') as tmp:
+                result = subprocess.run(
+                    ["make"],
+                    cwd=safe_path,
+                    stdout=tmp,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    check=False,
+                    timeout=300  # 5 minute timeout
+                )
+
+                # Read back only a safe amount of output
+                tmp.seek(0)
+                output = tmp.read(512 * 1024) # 512KB limit
+                if tmp.read(1):
+                    output += "\n[Output truncated due to size limit]"
+
+                return {
+                    "success": result.returncode == 0,
+                    "stdout": output,
+                    "stderr": "" # stderr is merged into stdout
+                }
+        except subprocess.TimeoutExpired:
+            logger.error(f"Build timed out for {safe_path}")
+            return {"success": False, "error": "Build timed out (limit: 5 minutes)"}
+        except Exception as e:
+            logger.error(f"Build failed: {e}")
+            return {"success": False, "error": str(e)}
+    finally:
+        execution_lock.release()
 
 @app.post("/run")
 def run_case(req: CommandRequest):
     """Executes 'make run' in the directory."""
-    # Security check
-    safe_path = validate_case_path(req.case_path)
-    logger.info(f"Running case: {safe_path}")
-
-    if not os.path.exists(safe_path):
-        logger.warning(f"Case path not found: {safe_path}")
-        raise HTTPException(status_code=404, detail="Case path not found")
+    # Enforce concurrency limit to prevent resource exhaustion
+    if not execution_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Another build or run is already in progress")
 
     try:
-        # Run make run
-        # Use a temporary file to capture output to avoid memory exhaustion (DoS)
-        with tempfile.TemporaryFile(mode='w+') as tmp:
-            result = subprocess.run(
-                ["make", "run"],
-                cwd=safe_path,
-                stdout=tmp,
-                stderr=subprocess.STDOUT,
-                text=True,
-                check=False,
-                timeout=600  # 10 minute timeout
-            )
+        # Security check
+        safe_path = validate_case_path(req.case_path)
+        logger.info(f"Running case: {safe_path}")
 
-            # Read back only a safe amount of output
-            tmp.seek(0)
-            output = tmp.read(512 * 1024) # 512KB limit
-            if tmp.read(1):
-                output += "\n[Output truncated due to size limit]"
+        if not os.path.exists(safe_path):
+            logger.warning(f"Case path not found: {safe_path}")
+            raise HTTPException(status_code=404, detail="Case path not found")
 
-            return {
-                "success": result.returncode == 0,
-                "stdout": output,
-                "stderr": "" # stderr is merged into stdout
-            }
-    except subprocess.TimeoutExpired:
-        logger.error(f"Run timed out for {safe_path}")
-        return {"success": False, "error": "Simulation timed out (limit: 10 minutes)"}
-    except Exception as e:
-        logger.error(f"Run failed: {e}")
-        return {"success": False, "error": str(e)}
+        try:
+            # Run make run
+            # Use a temporary file to capture output to avoid memory exhaustion (DoS)
+            with tempfile.TemporaryFile(mode='w+') as tmp:
+                result = subprocess.run(
+                    ["make", "run"],
+                    cwd=safe_path,
+                    stdout=tmp,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    check=False,
+                    timeout=600  # 10 minute timeout
+                )
+
+                # Read back only a safe amount of output
+                tmp.seek(0)
+                output = tmp.read(512 * 1024) # 512KB limit
+                if tmp.read(1):
+                    output += "\n[Output truncated due to size limit]"
+
+                return {
+                    "success": result.returncode == 0,
+                    "stdout": output,
+                    "stderr": "" # stderr is merged into stdout
+                }
+        except subprocess.TimeoutExpired:
+            logger.error(f"Run timed out for {safe_path}")
+            return {"success": False, "error": "Simulation timed out (limit: 10 minutes)"}
+        except Exception as e:
+            logger.error(f"Run failed: {e}")
+            return {"success": False, "error": str(e)}
+    finally:
+        execution_lock.release()
 
 @app.get("/config")
 def get_config(path: str):
