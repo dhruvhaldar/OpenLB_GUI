@@ -1,8 +1,32 @@
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 from backend.main import app
 import os
 
 client = TestClient(app)
+
+def test_security_headers():
+    response = client.get("/cases")
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+
+def test_get_config_dos_protection():
+    # Get a valid case path first
+    response = client.get("/cases")
+    if not response.json():
+        # If no cases exist, we can't test this easily without mocking validate_case_path too.
+        # Assuming cases exist as per other tests.
+        return
+
+    case = response.json()[0]
+    path = case['path']
+
+    # Patch os.path.getsize in backend.main to simulate a large file
+    with patch("backend.main.os.path.getsize") as mock_getsize:
+        mock_getsize.return_value = 1024 * 1024 + 100  # 1MB + 100 bytes
+
+        res = client.get(f"/config?path={path}")
+        assert res.status_code == 413
+        assert "file too large" in res.json()['detail'].lower()
 
 def test_list_cases():
     response = client.get("/cases")
