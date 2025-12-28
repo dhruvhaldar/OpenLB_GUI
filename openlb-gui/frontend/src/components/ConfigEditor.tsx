@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useRef } from 'react';
+import React, { memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { FileText, Save, Check, Loader2 } from 'lucide-react';
 
 interface ConfigEditorProps {
@@ -10,6 +10,21 @@ interface ConfigEditorProps {
 const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Optimization: Derived state pattern to reset saveStatus when initialContent changes
+  // This runs during render and causes an immediate re-render with the new state
+  const [prevInitialContent, setPrevInitialContent] = useState(initialContent);
+  if (initialContent !== prevInitialContent) {
+    setPrevInitialContent(initialContent);
+    setSaveStatus('idle');
+  }
+
+  // Update DOM node synchronously before paint to avoid flicker
+  useLayoutEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.value = initialContent;
+    }
+  }, [initialContent]);
 
   useEffect(() => {
     if (saveStatus === 'saved') {
