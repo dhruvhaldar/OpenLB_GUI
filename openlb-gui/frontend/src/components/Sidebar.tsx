@@ -35,17 +35,24 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase }
         <Activity className="text-blue-500" /> OpenLB Manager
       </h1>
       <div className="space-y-4">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
-        <div className="space-y-1">
-          {cases.map(c => (
-            <SidebarItem
-              key={c.id}
-              item={c}
-              isSelected={selectedCaseId === c.id}
-              onSelect={onSelectCase}
-            />
-          ))}
-        </div>
+        <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
+        <ul className="space-y-1" aria-labelledby="cases-heading">
+          {cases.length > 0 ? (
+            cases.map(c => (
+              <li key={c.id}>
+                <SidebarItem
+                  item={c}
+                  isSelected={selectedCaseId === c.id}
+                  onSelect={onSelectCase}
+                />
+              </li>
+            ))
+          ) : (
+            <li className="text-gray-500 text-sm px-3 py-2 italic text-center">
+              No cases found
+            </li>
+          )}
+        </ul>
       </div>
     </div>
   );
