@@ -253,4 +253,7 @@ def save_config(req: ConfigRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    # Security: Bind to localhost by default to prevent exposure to the local network
+    # Allow override via environment variable for specific deployment needs
+    host = os.getenv("HOST", "127.0.0.1")
+    uvicorn.run(app, host=host, port=8080)
