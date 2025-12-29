@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
+import LogViewer from './components/LogViewer';
 import type { Case } from './types';
 
 const API_URL = 'http://localhost:8080';
@@ -202,14 +203,7 @@ function App() {
                     {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
                   </button>
                 </div>
-                <pre
-                  role="log"
-                  tabIndex={0}
-                  aria-label="Process Output"
-                  className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded"
-                >
-                  {output}
-                </pre>
+                <LogViewer output={output} />
               </div>
             </div>
           </>
