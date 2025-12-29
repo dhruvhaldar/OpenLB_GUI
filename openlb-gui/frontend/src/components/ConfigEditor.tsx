@@ -1,15 +1,36 @@
-import React, { memo, useState, useEffect, useRef } from 'react';
+import React, { memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { FileText, Save, Check, Loader2 } from 'lucide-react';
 
 interface ConfigEditorProps {
   initialContent: string;
   onSave: (content: string) => Promise<void>;
   className?: string;
+  caseId?: string; // Optional ID for tracking case context switches
 }
 
-const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className }) => {
+const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className, caseId }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [prevCaseId, setPrevCaseId] = useState(caseId);
+
+  // Reset status when case context changes
+  if (prevCaseId !== caseId) {
+    setPrevCaseId(caseId);
+    setSaveStatus('idle');
+  }
+
+  // Optimization: Update the textarea value directly when initialContent changes
+  // to support reusing the component instance without unmounting/remounting.
+  useLayoutEffect(() => {
+    if (textareaRef.current) {
+      // Force update if content changed.
+      // Note: We depend on caseId to force update even if initialContent is identical
+      // when switching cases, ensuring dirty state is reset.
+      textareaRef.current.value = initialContent;
+      // Reset scroll position to top when content changes (new file loaded)
+      textareaRef.current.scrollTop = 0;
+    }
+  }, [initialContent, caseId]);
 
   useEffect(() => {
     if (saveStatus === 'saved') {
