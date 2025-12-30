@@ -32,6 +32,21 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     }
   }, [initialContent, caseId]);
 
+  // Optimization: Derived state pattern to reset saveStatus when initialContent changes
+  // This runs during render and causes an immediate re-render with the new state
+  const [prevInitialContent, setPrevInitialContent] = useState(initialContent);
+  if (initialContent !== prevInitialContent) {
+    setPrevInitialContent(initialContent);
+    setSaveStatus('idle');
+  }
+
+  // Update DOM node synchronously before paint to avoid flicker
+  useLayoutEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.value = initialContent;
+    }
+  }, [initialContent]);
+
   useEffect(() => {
     if (saveStatus === 'saved') {
       const timer = setTimeout(() => setSaveStatus('idle'), 2000);
