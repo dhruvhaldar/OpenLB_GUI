@@ -17,3 +17,8 @@
 **Vulnerability:** The `get_config` endpoint read arbitrary sized files into memory if they existed within the allowed directory. A large file (created externally or before limits) could cause OOM crashes.
 **Learning:** Reading files into memory is dangerous even if the path is valid. File size must be checked before reading, or stream processing with limits must be used.
 **Prevention:** Check `os.path.getsize()` before opening files for read, or use a streaming response with a maximum read limit. Added `X-Content-Type-Options: nosniff` as a defense-in-depth measure.
+
+## 2024-05-24 - Insecure Interface Binding
+**Vulnerability:** The backend was bound to `0.0.0.0`, exposing the unauthenticated API to the entire network.
+**Learning:** Defaulting to `0.0.0.0` is dangerous for local development tools or single-user applications, as it allows external access by default.
+**Prevention:** Explicitly bind to `127.0.0.1` (localhost) for tools intended for local use. Use `os.getenv("HOST", "127.0.0.1")` to allow configuration if needed.
