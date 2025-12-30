@@ -125,10 +125,10 @@ def build_case(req: CommandRequest):
     try:
         # Security check
         safe_path = validate_case_path(req.case_path)
-        logger.info(f"Building case: {safe_path}")
+        logger.info(f"Building case: {safe_path!r}")
 
         if not os.path.exists(safe_path):
-            logger.warning(f"Case path not found: {safe_path}")
+            logger.warning(f"Case path not found: {safe_path!r}")
             raise HTTPException(status_code=404, detail="Case path not found")
 
         try:
@@ -157,7 +157,7 @@ def build_case(req: CommandRequest):
                     "stderr": "" # stderr is merged into stdout
                 }
         except subprocess.TimeoutExpired:
-            logger.error(f"Build timed out for {safe_path}")
+            logger.error(f"Build timed out for {safe_path!r}")
             return {"success": False, "error": "Build timed out (limit: 5 minutes)"}
         except Exception as e:
             logger.error(f"Build failed: {e}")
@@ -175,10 +175,10 @@ def run_case(req: CommandRequest):
     try:
         # Security check
         safe_path = validate_case_path(req.case_path)
-        logger.info(f"Running case: {safe_path}")
+        logger.info(f"Running case: {safe_path!r}")
 
         if not os.path.exists(safe_path):
-            logger.warning(f"Case path not found: {safe_path}")
+            logger.warning(f"Case path not found: {safe_path!r}")
             raise HTTPException(status_code=404, detail="Case path not found")
 
         try:
@@ -207,7 +207,7 @@ def run_case(req: CommandRequest):
                     "stderr": "" # stderr is merged into stdout
                 }
         except subprocess.TimeoutExpired:
-            logger.error(f"Run timed out for {safe_path}")
+            logger.error(f"Run timed out for {safe_path!r}")
             return {"success": False, "error": "Simulation timed out (limit: 10 minutes)"}
         except Exception as e:
             logger.error(f"Run failed: {e}")
@@ -220,18 +220,18 @@ def get_config(path: str):
     """Reads the config.xml file."""
     # Validate path is within CASES_DIR for security
     safe_path = validate_case_path(path)
-    logger.info(f"Reading config for: {safe_path}")
+    logger.info(f"Reading config for: {safe_path!r}")
 
     config_path = os.path.join(safe_path, "config.xml")
     if not os.path.exists(config_path):
-        logger.warning(f"Config not found: {config_path}")
+        logger.warning(f"Config not found: {config_path!r}")
         return {"content": ""}
 
     # Check file size to prevent DoS (memory exhaustion)
     try:
         file_size = os.path.getsize(config_path)
         if file_size > 1024 * 1024:  # 1MB limit
-            logger.warning(f"Config file too large ({file_size} bytes): {config_path}")
+            logger.warning(f"Config file too large ({file_size} bytes): {config_path!r}")
             raise HTTPException(status_code=413, detail="File too large (limit 1MB)")
     except OSError as e:
         logger.error(f"Error checking config file size: {e}")
@@ -244,7 +244,7 @@ def get_config(path: str):
 def save_config(req: ConfigRequest):
     """Writes the config.xml file."""
     safe_path = validate_case_path(req.case_path)
-    logger.info(f"Saving config for: {safe_path} (size: {len(req.content)} bytes)")
+    logger.info(f"Saving config for: {safe_path!r} (size: {len(req.content)} bytes)")
 
     config_path = os.path.join(safe_path, "config.xml")
     with open(config_path, "w") as f:
