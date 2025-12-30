@@ -253,7 +253,11 @@ def save_config(req: ConfigRequest):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
     # Security: Bind to localhost by default to prevent exposure to the local network
     # Allow override via environment variable for specific deployment needs
     host = os.getenv("HOST", "127.0.0.1")
+    if host == "127.0.0.1":
+        print("Security notice: Server binding to localhost (127.0.0.1) by default.")
+        print("To allow external access, set the HOST environment variable (e.g., HOST=0.0.0.0).")
     uvicorn.run(app, host=host, port=8080)
