@@ -16,7 +16,7 @@ const SidebarItem = memo(({ item, isSelected, onSelect }: SidebarItemProps) => {
       aria-current={isSelected ? 'true' : undefined}
       className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
     >
-      <Folder size={16} />
+      <Folder size={16} aria-hidden="true" />
       <span className="truncate">{item.name}</span>
     </button>
   );
@@ -30,31 +30,35 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase }) => {
   return (
-    <div className="w-64 bg-gray-800 p-4 border-r border-gray-700">
-      <h1 className="text-xl font-bold mb-6 flex items-center gap-2">
-        <Activity className="text-blue-500" /> OpenLB Manager
-      </h1>
-      <div className="space-y-4">
-        <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
-        <ul className="space-y-1" aria-labelledby="cases-heading">
-          {cases.length > 0 ? (
-            cases.map(c => (
-              <li key={c.id}>
-                <SidebarItem
-                  item={c}
-                  isSelected={selectedCaseId === c.id}
-                  onSelect={onSelectCase}
-                />
-              </li>
-            ))
-          ) : (
-            <li className="text-gray-500 text-sm px-3 py-2 italic text-center">
-              No cases found
-            </li>
-          )}
-        </ul>
+    <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
+      <div className="p-4">
+        <h1 className="text-xl font-bold flex items-center gap-2">
+          <Activity className="text-blue-500" aria-hidden="true" /> OpenLB Manager
+        </h1>
       </div>
-    </div>
+      <nav className="flex-1 overflow-y-auto px-4 pb-4" aria-label="Simulation Cases">
+        <div className="space-y-4">
+          <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
+          <ul className="space-y-1" aria-labelledby="cases-heading">
+            {cases.length > 0 ? (
+              cases.map(c => (
+                <li key={c.id}>
+                  <SidebarItem
+                    item={c}
+                    isSelected={selectedCaseId === c.id}
+                    onSelect={onSelectCase}
+                  />
+                </li>
+              ))
+            ) : (
+              <li className="text-gray-500 text-sm px-3 py-2 italic text-center">
+                No cases found
+              </li>
+            )}
+          </ul>
+        </div>
+      </nav>
+    </aside>
   );
 };
 
