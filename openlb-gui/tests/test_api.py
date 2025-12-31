@@ -20,9 +20,12 @@ def test_get_config_dos_protection():
     case = response.json()[0]
     path = case['path']
 
-    # Patch os.path.getsize in backend.main to simulate a large file
-    with patch("backend.main.os.path.getsize") as mock_getsize:
-        mock_getsize.return_value = 1024 * 1024 + 100  # 1MB + 100 bytes
+    # Patch os.fstat to simulate a large file
+    # We patch it where it is used (os.fstat is a built-in, but we can patch os.fstat directly)
+    with patch("os.fstat") as mock_fstat:
+        # Mock the stat result object
+        mock_stat_result = type('stat_result', (), {'st_size': 1024 * 1024 + 100})
+        mock_fstat.return_value = mock_stat_result
 
         res = client.get(f"/config?path={path}")
         assert res.status_code == 413

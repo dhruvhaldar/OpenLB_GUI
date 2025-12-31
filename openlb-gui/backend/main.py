@@ -227,18 +227,19 @@ def get_config(path: str):
         logger.warning(f"Config not found: {config_path}")
         return {"content": ""}
 
-    # Check file size to prevent DoS (memory exhaustion)
     try:
-        file_size = os.path.getsize(config_path)
-        if file_size > 1024 * 1024:  # 1MB limit
-            logger.warning(f"Config file too large ({file_size} bytes): {config_path}")
-            raise HTTPException(status_code=413, detail="File too large (limit 1MB)")
-    except OSError as e:
-        logger.error(f"Error checking config file size: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        with open(config_path, "r") as f:
+            # Check file size using fstat on the open file descriptor
+            # This saves a syscall/path resolution and prevents TOCTOU race conditions
+            file_size = os.fstat(f.fileno()).st_size
+            if file_size > 1024 * 1024:  # 1MB limit
+                logger.warning(f"Config file too large ({file_size} bytes): {config_path}")
+                raise HTTPException(status_code=413, detail="File too large (limit 1MB)")
 
-    with open(config_path, "r") as f:
-        return {"content": f.read()}
+            return {"content": f.read()}
+    except OSError as e:
+        logger.error(f"Error reading config: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/config")
 def save_config(req: ConfigRequest):
