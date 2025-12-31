@@ -93,9 +93,12 @@ function App() {
         body: JSON.stringify({ case_path: selectedCase.path })
       });
       const data = await res.json();
-      setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
-      if (data.success) setOutput(prev => prev + '\nBuild Successful.\n');
-      else setOutput(prev => prev + '\nBuild Failed.\n');
+      // Optimization: Batch output updates to minimize re-renders and string copying overhead
+      // Prevents O(N) copy of the entire output history for the final status update
+      let newOutput = (data.stdout || '') + (data.stderr || '');
+      if (data.success) newOutput += '\nBuild Successful.\n';
+      else newOutput += '\nBuild Failed.\n';
+      setOutput(prev => prev + newOutput);
     } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
@@ -113,9 +116,12 @@ function App() {
         body: JSON.stringify({ case_path: selectedCase.path })
       });
       const data = await res.json();
-      setOutput(prev => prev + (data.stdout || '') + (data.stderr || ''));
-      if (data.success) setOutput(prev => prev + '\nRun Finished.\n');
-      else setOutput(prev => prev + '\nRun Failed.\n');
+      // Optimization: Batch output updates to minimize re-renders and string copying overhead
+      // Prevents O(N) copy of the entire output history for the final status update
+      let newOutput = (data.stdout || '') + (data.stderr || '');
+      if (data.success) newOutput += '\nRun Finished.\n';
+      else newOutput += '\nRun Failed.\n';
+      setOutput(prev => prev + newOutput);
     } catch {
       setOutput(prev => prev + '\nError connecting to server.\n');
     }
