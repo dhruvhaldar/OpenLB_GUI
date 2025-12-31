@@ -134,6 +134,12 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gray-900 text-white font-sans">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-blue-600 focus:text-white focus:font-bold focus:rounded-br-lg top-0 left-0 transition-transform"
+      >
+        Skip to main content
+      </a>
       <Sidebar
         cases={cases}
         selectedCaseId={selectedCase?.id}
@@ -141,7 +147,7 @@ function App() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col overflow-hidden outline-none">
         {selectedCase ? (
           <>
             <header className="bg-gray-800 p-4 border-b border-gray-700 flex justify-between items-center">
