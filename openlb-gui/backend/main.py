@@ -62,6 +62,14 @@ def validate_case_path(path_str: str) -> str:
     Raises HTTPException if invalid.
     """
     try:
+        # Security check: Reject paths with control characters (e.g., newlines, null bytes)
+        # to prevent Log Injection (CWE-117) and other filesystem weirdness.
+        # We allow printable characters, spaces, and path separators.
+        # This explicitly blocks payloads like "safe/path\nINJECTED_LOG"
+        if any(ord(c) < 32 and c not in ('\t',) for c in path_str):
+            logger.warning(f"Invalid characters in path: {repr(path_str)}")
+            raise HTTPException(status_code=400, detail="Invalid characters in path")
+
         # Resolve the input path to handle '..' and symlinks
         target_path = Path(path_str).resolve()
 
