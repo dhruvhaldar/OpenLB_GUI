@@ -19,8 +19,10 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     setSaveStatus('idle');
   }
 
-  // Optimization: Update the textarea value directly when initialContent changes
-  // to support reusing the component instance without unmounting/remounting.
+  // Optimization: Update the textarea value directly when initialContent changes.
+  // This supports reusing the component instance without unmounting/remounting.
+  // Note: This replaces the need for a separate effect just for initialContent,
+  // preventing double updates during render.
   useLayoutEffect(() => {
     if (textareaRef.current) {
       // Force update if content changed.
@@ -39,13 +41,6 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     setPrevInitialContent(initialContent);
     setSaveStatus('idle');
   }
-
-  // Update DOM node synchronously before paint to avoid flicker
-  useLayoutEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.value = initialContent;
-    }
-  }, [initialContent]);
 
   useEffect(() => {
     if (saveStatus === 'saved') {
