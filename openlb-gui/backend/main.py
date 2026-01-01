@@ -9,6 +9,7 @@ import logging
 import tempfile
 import re
 import threading
+import itertools
 from pathlib import Path
 
 # Configure logging
@@ -101,7 +102,12 @@ def list_cases():
     cases = []
     # Find Makefiles at depth 1 and 2 (e.g., Case/Makefile and Domain/Case/Makefile)
     # Using explicit depths instead of recursive=True avoids scanning large output directories
-    makefiles = glob.glob(f"{CASES_DIR}/*/Makefile") + glob.glob(f"{CASES_DIR}/*/*/Makefile")
+    # Optimization: Use itertools.chain and iglob to avoid creating intermediate lists
+    # for potentially large numbers of cases.
+    makefiles = itertools.chain(
+        glob.iglob(f"{CASES_DIR}/*/Makefile"),
+        glob.iglob(f"{CASES_DIR}/*/*/Makefile")
+    )
     for mk in makefiles:
         path = os.path.dirname(mk)
         rel_path = os.path.relpath(path, CASES_DIR)
