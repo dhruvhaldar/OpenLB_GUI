@@ -9,6 +9,7 @@ const API_URL = 'http://localhost:8080';
 
 function App() {
   const [cases, setCases] = useState<Case[]>([]);
+  const [isLoadingCases, setIsLoadingCases] = useState(true);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [config, setConfig] = useState<string | null>(null);
   const [output, setOutput] = useState('');
@@ -29,6 +30,10 @@ function App() {
         }
       } catch (e) {
         console.error('Failed to fetch cases', e);
+      } finally {
+        if (!ignore) {
+          setIsLoadingCases(false);
+        }
       }
     };
     fetchCases();
@@ -150,6 +155,7 @@ function App() {
         cases={cases}
         selectedCaseId={selectedCase?.id}
         onSelectCase={handleSelectCase}
+        isLoading={isLoadingCases}
       />
 
       {/* Main Content */}
@@ -167,7 +173,7 @@ function App() {
                   {status === 'building' ? (
                     <Loader2 className="animate-spin" size={16} />
                   ) : (
-                    <Settings size={16} />
+                    <Settings size={16} aria-hidden="true" />
                   )}
                   {status === 'building' ? 'Building...' : 'Build'}
                 </button>
@@ -179,7 +185,7 @@ function App() {
                   {status === 'running' ? (
                     <Loader2 className="animate-spin" size={16} />
                   ) : (
-                    <Play size={16} />
+                    <Play size={16} aria-hidden="true" />
                   )}
                   {status === 'running' ? 'Running...' : 'Run'}
                 </button>
