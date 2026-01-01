@@ -10,6 +10,7 @@ import tempfile
 import re
 import threading
 import itertools
+import shutil
 from pathlib import Path
 
 # Configure logging
@@ -89,6 +90,10 @@ def validate_case_path(path_str: str) -> str:
 class CommandRequest(BaseModel):
     case_path: str
 
+class DuplicateRequest(BaseModel):
+    source_path: str
+    new_name: str
+
 class ConfigRequest(BaseModel):
     case_path: str
     content: str
@@ -106,6 +111,51 @@ class ConfigRequest(BaseModel):
             raise ValueError('XML Document Type Definitions (DTD) are not allowed for security reasons')
 
         return v
+
+@app.post("/cases/duplicate")
+def duplicate_case(req: DuplicateRequest):
+    """Duplicates an existing case."""
+    safe_source = validate_case_path(req.source_path)
+    logger.info(f"Duplicating case: {safe_source} to name: {req.new_name}")
+
+    if not re.match(r'^[a-zA-Z0-9_-]+$', req.new_name):
+        raise HTTPException(status_code=400, detail="Invalid name. Use alphanumeric, underscore, and hyphen only.")
+
+    parent_dir = os.path.dirname(safe_source)
+    target_path = os.path.join(parent_dir, req.new_name)
+
+    # Validate target path (even though constructed safely, ensures it's in CASES_DIR)
+    try:
+        if not Path(target_path).resolve().is_relative_to(CASES_PATH):
+             raise HTTPException(status_code=403, detail="Access denied")
+    except Exception:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if os.path.exists(target_path):
+        raise HTTPException(status_code=409, detail="Case with this name already exists")
+
+    try:
+        shutil.copytree(safe_source, target_path)
+        return {"success": True, "new_path": target_path}
+    except Exception as e:
+        logger.error(f"Duplicate failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/cases")
+def delete_case(case_path: str):
+    """Deletes a case directory."""
+    safe_path = validate_case_path(case_path)
+    logger.info(f"Deleting case: {safe_path}")
+
+    if not os.path.exists(safe_path):
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    try:
+        shutil.rmtree(safe_path)
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Delete failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/cases")
 def list_cases():
