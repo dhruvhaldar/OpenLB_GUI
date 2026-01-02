@@ -4,12 +4,10 @@ from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, field_validator
 import os
 import subprocess
-import glob
 import logging
 import tempfile
 import re
 import threading
-import itertools
 import shutil
 from pathlib import Path
 
@@ -162,34 +160,75 @@ def list_cases():
     """Scans for directories with a Makefile in my_cases."""
     logger.info("Listing cases")
     cases = []
-    # Find Makefiles at depth 1 and 2 (e.g., Case/Makefile and Domain/Case/Makefile)
-    # Using explicit depths instead of recursive=True avoids scanning large output directories
-    # Optimization: Use itertools.chain and iglob to avoid creating intermediate lists
-    # for potentially large numbers of cases.
-    makefiles = itertools.chain(
-        glob.iglob(f"{CASES_DIR}/*/Makefile"),
-        glob.iglob(f"{CASES_DIR}/*/*/Makefile")
-    )
-    for mk in makefiles:
-        path = os.path.dirname(mk)
+    try:
+        # Performance Optimization: Use os.scandir() instead of glob.glob().
+        # scandir() yields DirEntry objects that contain file type information (is_dir, is_symlink)
+        # without requiring additional system calls (stat). This avoids thousands of unnecessary stat calls.
+        # It also allows us to skip expensive Path.resolve() checks for non-symlink directories.
+        with os.scandir(CASES_DIR) as it1:
+            for entry1 in it1:
+                if not entry1.is_dir() or entry1.name.startswith('.'): continue
 
-        # Security check: Ensure the path is actually within CASES_DIR
-        # This prevents symlink attacks where a symlink in my_cases points to a directory outside
-        # resolving to an external path.
-        resolved_path = Path(path).resolve()
-        if not resolved_path.is_relative_to(CASES_PATH):
-            logger.warning(f"Ignored symlinked case pointing outside allowed directory: {path} -> {resolved_path}")
-            continue
+                # Level 1 check (CASES_DIR/Case/Makefile)
+                mk1 = os.path.join(entry1.path, "Makefile")
+                # accessing file directly is faster than glob
+                if os.path.isfile(mk1):
+                    # Security check: Only resolve if it's a symlink
+                    if entry1.is_symlink():
+                        try:
+                            resolved = Path(entry1.path).resolve()
+                            if not resolved.is_relative_to(CASES_PATH):
+                                logger.warning(f"Ignored symlinked case: {entry1.path} -> {resolved}")
+                                continue
+                        except Exception:
+                            continue
 
-        rel_path = os.path.relpath(path, CASES_DIR)
-        domain = rel_path.split(os.sep)[0] if os.sep in rel_path else "Uncategorized"
-        name = os.path.basename(path)
-        cases.append({
-            "id": rel_path,
-            "path": path,
-            "name": name,
-            "domain": domain
-        })
+                    rel_path = entry1.name
+                    cases.append({
+                        "id": rel_path,
+                        "path": entry1.path,
+                        "name": entry1.name,
+                        "domain": "Uncategorized"
+                    })
+
+                # Level 2 check (CASES_DIR/Domain/Case/Makefile)
+                # Ensure we don't follow unsafe symlinks when scanning children
+                if entry1.is_symlink():
+                    try:
+                        resolved = Path(entry1.path).resolve()
+                        if not resolved.is_relative_to(CASES_PATH):
+                            continue
+                    except Exception:
+                        continue
+
+                try:
+                    with os.scandir(entry1.path) as it2:
+                        for entry2 in it2:
+                            if not entry2.is_dir() or entry2.name.startswith('.'): continue
+
+                            mk2 = os.path.join(entry2.path, "Makefile")
+                            if os.path.isfile(mk2):
+                                # Security check: Only resolve if it's a symlink
+                                if entry2.is_symlink():
+                                    try:
+                                        resolved = Path(entry2.path).resolve()
+                                        if not resolved.is_relative_to(CASES_PATH):
+                                            logger.warning(f"Ignored symlinked case: {entry2.path} -> {resolved}")
+                                            continue
+                                    except Exception:
+                                        continue
+
+                                rel_path = os.path.join(entry1.name, entry2.name)
+                                cases.append({
+                                    "id": rel_path,
+                                    "path": entry2.path,
+                                    "name": entry2.name,
+                                    "domain": entry1.name
+                                })
+                except (PermissionError, NotADirectoryError):
+                    continue
+    except FileNotFoundError:
+        pass
     return cases
 
 @app.post("/build")
