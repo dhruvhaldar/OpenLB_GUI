@@ -1,46 +1,15 @@
-import React, { memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { FileText, Save, Check, Loader2 } from 'lucide-react';
 
 interface ConfigEditorProps {
   initialContent: string;
   onSave: (content: string) => Promise<void>;
   className?: string;
-  caseId?: string; // Optional ID for tracking case context switches
 }
 
-const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className, caseId }) => {
+const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [prevCaseId, setPrevCaseId] = useState(caseId);
-
-  // Reset status when case context changes
-  if (prevCaseId !== caseId) {
-    setPrevCaseId(caseId);
-    setSaveStatus('idle');
-  }
-
-  // Optimization: Update the textarea value directly when initialContent changes.
-  // This supports reusing the component instance without unmounting/remounting.
-  // Note: This replaces the need for a separate effect just for initialContent,
-  // preventing double updates during render.
-  useLayoutEffect(() => {
-    if (textareaRef.current) {
-      // Force update if content changed.
-      // Note: We depend on caseId to force update even if initialContent is identical
-      // when switching cases, ensuring dirty state is reset.
-      textareaRef.current.value = initialContent;
-      // Reset scroll position to top when content changes (new file loaded)
-      textareaRef.current.scrollTop = 0;
-    }
-  }, [initialContent, caseId]);
-
-  // Optimization: Derived state pattern to reset saveStatus when initialContent changes
-  // This runs during render and causes an immediate re-render with the new state
-  const [prevInitialContent, setPrevInitialContent] = useState(initialContent);
-  if (initialContent !== prevInitialContent) {
-    setPrevInitialContent(initialContent);
-    setSaveStatus('idle');
-  }
 
   useEffect(() => {
     if (saveStatus === 'saved') {
