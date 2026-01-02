@@ -48,7 +48,7 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
           disabled={saveStatus === 'saving'}
           title="Save (Ctrl+S)"
           aria-keyshortcuts="Control+S"
-          className={`text-sm flex items-center gap-2 px-3 py-1 rounded transition-colors ${
+          className={`text-sm flex items-center gap-2 px-3 py-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
             saveStatus === 'saved'
               ? 'text-green-400 hover:text-green-300'
               : saveStatus === 'error'
