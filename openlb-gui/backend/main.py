@@ -122,6 +122,15 @@ def list_cases():
     )
     for mk in makefiles:
         path = os.path.dirname(mk)
+
+        # Security check: Ensure the path is actually within CASES_DIR
+        # This prevents symlink attacks where a symlink in my_cases points to a directory outside
+        # resolving to an external path.
+        resolved_path = Path(path).resolve()
+        if not resolved_path.is_relative_to(CASES_PATH):
+            logger.warning(f"Ignored symlinked case pointing outside allowed directory: {path} -> {resolved_path}")
+            continue
+
         rel_path = os.path.relpath(path, CASES_DIR)
         domain = rel_path.split(os.sep)[0] if os.sep in rel_path else "Uncategorized"
         name = os.path.basename(path)
