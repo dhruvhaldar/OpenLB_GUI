@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import LogViewer from './components/LogViewer';
@@ -143,6 +143,75 @@ function App() {
     }
   };
 
+  const handleDownloadOutput = () => {
+    const blob = new Blob([output], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'output.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDuplicate = async () => {
+    if (!selectedCase) return;
+    const newName = window.prompt('Enter new name for the case (alphanumeric, -, _):');
+    if (!newName) return;
+
+    try {
+      const res = await fetch(`${API_URL}/cases/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_path: selectedCase.path, new_name: newName })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to duplicate: ${err.detail}`);
+        return;
+      }
+      const data = await res.json();
+      // Refresh cases
+      const casesRes = await fetch(`${API_URL}/cases`);
+      const casesData = await casesRes.json();
+      setCases(casesData);
+
+      // Select the new case
+      const newCase = casesData.find((c: Case) => c.path === data.new_path);
+      if (newCase) {
+        handleSelectCase(newCase);
+      }
+    } catch (e) {
+      console.error('Duplicate failed', e);
+      alert('Failed to duplicate case');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedCase) return;
+    if (!window.confirm(`Are you sure you want to delete "${selectedCase.name}"? This action cannot be undone.`)) return;
+
+    try {
+      const res = await fetch(`${API_URL}/cases?case_path=${encodeURIComponent(selectedCase.path)}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to delete: ${err.detail}`);
+        return;
+      }
+      // Refresh cases
+      const casesRes = await fetch(`${API_URL}/cases`);
+      const casesData = await casesRes.json();
+      setCases(casesData);
+      setSelectedCase(null);
+      setConfig(null);
+      setOutput('');
+    } catch (e) {
+      console.error('Delete failed', e);
+      alert('Failed to delete case');
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-900 text-white font-sans">
       <a
@@ -163,7 +232,27 @@ function App() {
         {selectedCase ? (
           <>
             <header className="bg-gray-800 p-4 border-b border-gray-700 flex justify-between items-center">
-              <h2 className="text-lg font-medium">{selectedCase.domain} / {selectedCase.name}</h2>
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-medium">{selectedCase.domain} / {selectedCase.name}</h2>
+                <div className="flex gap-1">
+                  <button
+                    onClick={handleDuplicate}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                    title="Duplicate Case"
+                    aria-label="Duplicate Case"
+                  >
+                    <CopyPlus size={18} />
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded transition-colors"
+                    title="Delete Case"
+                    aria-label="Delete Case"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleBuild}
@@ -212,14 +301,24 @@ function App() {
                   <h3 className="font-semibold text-gray-400 flex items-center gap-2">
                     <Terminal size={16} /> Output
                   </h3>
-                  <button
-                    onClick={handleCopyOutput}
-                    className="text-gray-400 hover:text-white transition-colors"
-                    aria-label="Copy output"
-                    title="Copy to clipboard"
-                  >
-                    {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                        onClick={handleDownloadOutput}
+                        className="text-gray-400 hover:text-white transition-colors"
+                        aria-label="Download output"
+                        title="Download output"
+                    >
+                        <Download size={16} />
+                    </button>
+                    <button
+                        onClick={handleCopyOutput}
+                        className="text-gray-400 hover:text-white transition-colors"
+                        aria-label="Copy output"
+                        title="Copy to clipboard"
+                    >
+                        {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <LogViewer output={output} />
               </div>

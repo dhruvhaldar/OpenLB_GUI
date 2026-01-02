@@ -73,3 +73,34 @@ def test_build_run():
     res_run = client.post("/run", json={"case_path": case['path']})
     assert res_run.status_code == 200
     assert res_run.json()['success'] is True
+
+def test_duplicate_delete_case():
+    # 1. List cases to find a source
+    response = client.get("/cases")
+    if not response.json():
+        return # Cannot test if no cases
+
+    source_case = response.json()[0]
+    source_path = source_case['path']
+    new_name = "test_duplicate_case_123"
+
+    # 2. Duplicate it
+    res_dup = client.post("/cases/duplicate", json={
+        "source_path": source_path,
+        "new_name": new_name
+    })
+    assert res_dup.status_code == 200
+    new_path = res_dup.json()['new_path']
+    assert new_name in new_path
+
+    # 3. Verify it exists in list
+    res_list = client.get("/cases")
+    assert any(c['path'] == new_path for c in res_list.json())
+
+    # 4. Delete it
+    res_del = client.delete(f"/cases?case_path={new_path}")
+    assert res_del.status_code == 200
+
+    # 5. Verify it is gone
+    res_list_after = client.get("/cases")
+    assert not any(c['path'] == new_path for c in res_list_after.json())
