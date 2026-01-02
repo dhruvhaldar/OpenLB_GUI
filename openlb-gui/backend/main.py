@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 import os
 import subprocess
 import glob
@@ -88,14 +88,14 @@ def validate_case_path(path_str: str) -> str:
         raise HTTPException(status_code=403, detail="Access denied")
 
 class CommandRequest(BaseModel):
-    case_path: str
+    case_path: str = Field(..., max_length=4096)
 
 class DuplicateRequest(BaseModel):
-    source_path: str
-    new_name: str
+    source_path: str = Field(..., max_length=4096)
+    new_name: str = Field(..., max_length=255)
 
 class ConfigRequest(BaseModel):
-    case_path: str
+    case_path: str = Field(..., max_length=4096)
     content: str
 
     @field_validator('content')
@@ -139,7 +139,7 @@ def duplicate_case(req: DuplicateRequest):
         return {"success": True, "new_path": target_path}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to duplicate case")
 
 @app.delete("/cases")
 def delete_case(case_path: str):
@@ -155,7 +155,7 @@ def delete_case(case_path: str):
         return {"success": True}
     except Exception as e:
         logger.error(f"Delete failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to delete case")
 
 @app.get("/cases")
 def list_cases():
@@ -238,7 +238,7 @@ def build_case(req: CommandRequest):
             return {"success": False, "error": "Build timed out (limit: 5 minutes)"}
         except Exception as e:
             logger.error(f"Build failed: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "Build failed due to an internal error"}
     finally:
         execution_lock.release()
 
@@ -288,7 +288,7 @@ def run_case(req: CommandRequest):
             return {"success": False, "error": "Simulation timed out (limit: 10 minutes)"}
         except Exception as e:
             logger.error(f"Run failed: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "Simulation failed due to an internal error"}
     finally:
         execution_lock.release()
 
