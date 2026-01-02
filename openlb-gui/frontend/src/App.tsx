@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus, Eraser } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import LogViewer from './components/LogViewer';
@@ -143,6 +143,10 @@ function App() {
     }
   };
 
+  const handleClearOutput = () => {
+    setOutput('');
+  };
+
   const handleDownloadOutput = () => {
     const blob = new Blob([output], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -237,7 +241,7 @@ function App() {
                 <div className="flex gap-1">
                   <button
                     onClick={handleDuplicate}
-                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                     title="Duplicate Case"
                     aria-label="Duplicate Case"
                   >
@@ -245,7 +249,7 @@ function App() {
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded transition-colors"
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                     title="Delete Case"
                     aria-label="Delete Case"
                   >
@@ -257,7 +261,7 @@ function App() {
                 <button
                   onClick={handleBuild}
                   disabled={status !== 'idle'}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                 >
                   {status === 'building' ? (
                     <Loader2 className="animate-spin" size={16} />
@@ -269,7 +273,7 @@ function App() {
                 <button
                   onClick={handleRun}
                   disabled={status !== 'idle'}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                 >
                   {status === 'running' ? (
                     <Loader2 className="animate-spin" size={16} />
@@ -303,8 +307,16 @@ function App() {
                   </h3>
                   <div className="flex gap-2">
                     <button
+                        onClick={handleClearOutput}
+                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                        aria-label="Clear output"
+                        title="Clear output"
+                    >
+                        <Eraser size={16} />
+                    </button>
+                    <button
                         onClick={handleDownloadOutput}
-                        className="text-gray-400 hover:text-white transition-colors"
+                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                         aria-label="Download output"
                         title="Download output"
                     >
@@ -312,7 +324,7 @@ function App() {
                     </button>
                     <button
                         onClick={handleCopyOutput}
-                        className="text-gray-400 hover:text-white transition-colors"
+                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                         aria-label="Copy output"
                         title="Copy to clipboard"
                     >
