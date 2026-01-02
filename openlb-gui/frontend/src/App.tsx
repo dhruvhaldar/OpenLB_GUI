@@ -195,9 +195,9 @@ function App() {
             <div className="flex-1 flex overflow-hidden">
               {config !== null ? (
                 <ConfigEditor
+                  key={selectedCase.id}
                   initialContent={config}
                   onSave={handleSaveConfig}
-                  caseId={selectedCase.id}
                   className="w-1/2 p-4 border-r border-gray-700"
                 />
               ) : (
