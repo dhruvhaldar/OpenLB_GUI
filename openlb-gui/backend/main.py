@@ -60,6 +60,24 @@ execution_lock = threading.Lock()
 # \x0a-\x1f matches 10-31
 CONTROL_CHARS = re.compile(r'[\x00-\x08\x0a-\x1f]')
 
+# Allowed environment variables to pass to subprocesses
+SAFE_ENV_VARS = {
+    'PATH', 'LANG', 'LC_ALL', 'TERM', 'LD_LIBRARY_PATH',
+    'HOME', 'USER', 'SHELL', 'TMPDIR'
+}
+
+def get_safe_env():
+    """
+    Returns a sanitized environment dictionary for subprocess execution.
+    Only allows specific safe variables and those starting with OLB_.
+    Prevents leakage of sensitive backend environment variables (keys, secrets).
+    """
+    safe_env = {}
+    for key, value in os.environ.items():
+        if key in SAFE_ENV_VARS or key.startswith('OLB_'):
+            safe_env[key] = value
+    return safe_env
+
 def validate_case_path(path_str: str) -> str:
     """
     Validates that the path is within the CASES_DIR.
@@ -258,9 +276,11 @@ def build_case(req: CommandRequest):
             # Run make
             # Use a temporary file to capture output to avoid memory exhaustion (DoS)
             with tempfile.TemporaryFile(mode='w+') as tmp:
+                # Use sanitized environment to prevent secret leakage
                 result = subprocess.run(
                     ["make"],
                     cwd=safe_path,
+                    env=get_safe_env(),
                     stdout=tmp,
                     stderr=subprocess.STDOUT,
                     text=True,
@@ -308,9 +328,11 @@ def run_case(req: CommandRequest):
             # Run make run
             # Use a temporary file to capture output to avoid memory exhaustion (DoS)
             with tempfile.TemporaryFile(mode='w+') as tmp:
+                # Use sanitized environment to prevent secret leakage
                 result = subprocess.run(
                     ["make", "run"],
                     cwd=safe_path,
+                    env=get_safe_env(),
                     stdout=tmp,
                     stderr=subprocess.STDOUT,
                     text=True,
