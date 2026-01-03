@@ -54,6 +54,20 @@ CASES_DIR = str(CASES_PATH)
 # This prevents Resource Exhaustion DoS and file corruption
 execution_lock = threading.Lock()
 
+def get_safe_env():
+    """
+    Returns a sanitized environment dictionary for subprocesses.
+    We only whitelist essential variables to prevent leakage of secrets.
+    """
+    safe_env = {}
+    whitelist = [
+        'PATH', 'LD_LIBRARY_PATH', 'HOME', 'USER', 'LANG', 'LC_ALL', 'LC_CTYPE', 'TERM', 'SHELL'
+    ]
+    for key in whitelist:
+        if key in os.environ:
+            safe_env[key] = os.environ[key]
+    return safe_env
+
 def validate_case_path(path_str: str) -> str:
     """
     Validates that the path is within the CASES_DIR.
@@ -250,6 +264,7 @@ def build_case(req: CommandRequest):
         try:
             # Run make
             # Use a temporary file to capture output to avoid memory exhaustion (DoS)
+            # Use get_safe_env() to prevent environment variable leakage
             with tempfile.TemporaryFile(mode='w+') as tmp:
                 result = subprocess.run(
                     ["make"],
@@ -258,7 +273,8 @@ def build_case(req: CommandRequest):
                     stderr=subprocess.STDOUT,
                     text=True,
                     check=False,
-                    timeout=300  # 5 minute timeout
+                    timeout=300,  # 5 minute timeout
+                    env=get_safe_env()
                 )
 
                 # Read back only a safe amount of output
@@ -300,6 +316,7 @@ def run_case(req: CommandRequest):
         try:
             # Run make run
             # Use a temporary file to capture output to avoid memory exhaustion (DoS)
+            # Use get_safe_env() to prevent environment variable leakage
             with tempfile.TemporaryFile(mode='w+') as tmp:
                 result = subprocess.run(
                     ["make", "run"],
@@ -308,7 +325,8 @@ def run_case(req: CommandRequest):
                     stderr=subprocess.STDOUT,
                     text=True,
                     check=False,
-                    timeout=600  # 10 minute timeout
+                    timeout=600,  # 10 minute timeout
+                    env=get_safe_env()
                 )
 
                 # Read back only a safe amount of output
