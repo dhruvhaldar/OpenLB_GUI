@@ -6,6 +6,8 @@ import LogViewer from './components/LogViewer';
 import type { Case } from './types';
 
 const API_URL = 'http://localhost:8080';
+// Optimization: Limit log history to prevent memory exhaustion and DOM rendering lag
+const MAX_LOG_LENGTH = 100000;
 
 function App() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -18,6 +20,15 @@ function App() {
 
   // Optimization: Cache config content to avoid unnecessary network requests
   const configCache = useRef<Record<string, string>>({});
+
+  // Optimization: Helper to append logs and enforce size limit
+  const appendLog = useCallback((currentLog: string, newLog: string) => {
+    const next = currentLog + newLog;
+    if (next.length > MAX_LOG_LENGTH) {
+      return next.slice(next.length - MAX_LOG_LENGTH);
+    }
+    return next;
+  }, []);
 
   const refreshCases = useCallback(async () => {
     setIsLoadingCases(true);
@@ -100,9 +111,9 @@ function App() {
       let newOutput = (data.stdout || '') + (data.stderr || '');
       if (data.success) newOutput += '\nBuild Successful.\n';
       else newOutput += '\nBuild Failed.\n';
-      setOutput(prev => prev + newOutput);
+      setOutput(prev => appendLog(prev, newOutput));
     } catch {
-      setOutput(prev => prev + '\nError connecting to server.\n');
+      setOutput(prev => appendLog(prev, '\nError connecting to server.\n'));
     }
     setStatus('idle');
   };
@@ -123,9 +134,9 @@ function App() {
       let newOutput = (data.stdout || '') + (data.stderr || '');
       if (data.success) newOutput += '\nRun Finished.\n';
       else newOutput += '\nRun Failed.\n';
-      setOutput(prev => prev + newOutput);
+      setOutput(prev => appendLog(prev, newOutput));
     } catch {
-      setOutput(prev => prev + '\nError connecting to server.\n');
+      setOutput(prev => appendLog(prev, '\nError connecting to server.\n'));
     }
     setStatus('idle');
   };
