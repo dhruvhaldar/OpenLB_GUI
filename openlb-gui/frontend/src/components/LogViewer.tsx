@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 
 interface LogViewerProps {
   output: string;
@@ -16,8 +16,17 @@ interface LogViewerProps {
  * avoiding re-renders when parent state (like copy button status, build status) changes.
  */
 const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
+  const logRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [output]);
+
   return (
     <pre
+      ref={logRef}
       role="log"
       tabIndex={0}
       aria-label="Process Output"
