@@ -19,26 +19,23 @@ function App() {
   // Optimization: Cache config content to avoid unnecessary network requests
   const configCache = useRef<Record<string, string>>({});
 
-  useEffect(() => {
-    let ignore = false;
-    const fetchCases = async () => {
-      try {
-        const res = await fetch(`${API_URL}/cases`);
-        const data = await res.json();
-        if (!ignore) {
-          setCases(data);
-        }
-      } catch (e) {
-        console.error('Failed to fetch cases', e);
-      } finally {
-        if (!ignore) {
-          setIsLoadingCases(false);
-        }
-      }
-    };
-    fetchCases();
-    return () => { ignore = true; };
+  const refreshCases = useCallback(async () => {
+    setIsLoadingCases(true);
+    try {
+      const res = await fetch(`${API_URL}/cases`);
+      if (!res.ok) throw new Error('Failed to fetch cases');
+      const data = await res.json();
+      setCases(data);
+    } catch (e) {
+      console.error('Failed to fetch cases', e);
+    } finally {
+      setIsLoadingCases(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshCases();
+  }, [refreshCases]);
 
 
   const fetchConfig = useCallback(async (casePath: string) => {
@@ -229,6 +226,7 @@ function App() {
         selectedCaseId={selectedCase?.id}
         onSelectCase={handleSelectCase}
         isLoading={isLoadingCases}
+        onRefresh={refreshCases}
       />
 
       {/* Main Content */}

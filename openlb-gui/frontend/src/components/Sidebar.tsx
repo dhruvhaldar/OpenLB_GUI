@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Folder, Activity } from 'lucide-react';
+import { Folder, Activity, RefreshCw } from 'lucide-react';
 import type { Case } from '../types';
 
 interface SidebarItemProps {
@@ -27,15 +27,31 @@ interface SidebarProps {
   selectedCaseId: string | undefined;
   onSelectCase: (c: Case) => void;
   isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, isLoading }) => {
+const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, isLoading, onRefresh }) => {
   return (
     <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
-      <div className="p-4">
+      <div className="p-4 flex items-center justify-between">
         <h1 className="text-xl font-bold flex items-center gap-2">
           <Activity className="text-blue-500" aria-hidden="true" /> OpenLB Manager
         </h1>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+            aria-label="Refresh cases"
+            title="Refresh cases"
+            disabled={isLoading}
+          >
+            <RefreshCw
+              size={18}
+              className={isLoading ? 'animate-spin' : ''}
+              aria-hidden="true"
+            />
+          </button>
+        )}
       </div>
       <nav className="flex-1 overflow-y-auto px-4 pb-4" aria-label="Simulation Cases">
         <div className="space-y-4">
