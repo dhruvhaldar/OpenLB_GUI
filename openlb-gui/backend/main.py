@@ -194,20 +194,23 @@ def list_cases():
             for entry1 in it1:
                 if not entry1.is_dir() or entry1.name.startswith('.'): continue
 
+                # Optimization: Cache symlink status and resolve only once per entry
+                # This prevents redundant resolve() calls when an entry is checked for both
+                # being a case (Level 1) and a domain container (Level 2).
+                if entry1.is_symlink():
+                    try:
+                        resolved = Path(entry1.path).resolve()
+                        if not resolved.is_relative_to(CASES_PATH):
+                            logger.warning(f"Ignored symlinked case: {entry1.path} -> {resolved}")
+                            continue
+                    except Exception:
+                        continue
+
                 # Level 1 check (CASES_DIR/Case/Makefile)
                 mk1 = os.path.join(entry1.path, "Makefile")
                 # accessing file directly is faster than glob
                 if os.path.isfile(mk1):
-                    # Security check: Only resolve if it's a symlink
-                    if entry1.is_symlink():
-                        try:
-                            resolved = Path(entry1.path).resolve()
-                            if not resolved.is_relative_to(CASES_PATH):
-                                logger.warning(f"Ignored symlinked case: {entry1.path} -> {resolved}")
-                                continue
-                        except Exception:
-                            continue
-
+                    # Entry is a Case
                     rel_path = entry1.name
                     cases.append({
                         "id": rel_path,
@@ -217,15 +220,7 @@ def list_cases():
                     })
 
                 # Level 2 check (CASES_DIR/Domain/Case/Makefile)
-                # Ensure we don't follow unsafe symlinks when scanning children
-                if entry1.is_symlink():
-                    try:
-                        resolved = Path(entry1.path).resolve()
-                        if not resolved.is_relative_to(CASES_PATH):
-                            continue
-                    except Exception:
-                        continue
-
+                # If we passed the symlink check above, it's safe to scan children
                 try:
                     with os.scandir(entry1.path) as it2:
                         for entry2 in it2:
