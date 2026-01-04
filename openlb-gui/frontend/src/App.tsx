@@ -22,12 +22,23 @@ function App() {
   const configCache = useRef<Record<string, string>>({});
 
   // Optimization: Helper to append logs and enforce size limit
+  // Optimized to avoid allocating intermediate string larger than MAX_LOG_LENGTH
   const appendLog = useCallback((currentLog: string, newLog: string) => {
-    const next = currentLog + newLog;
-    if (next.length > MAX_LOG_LENGTH) {
-      return next.slice(next.length - MAX_LOG_LENGTH);
+    // If new log is larger than limit, we only need the end of it
+    if (newLog.length >= MAX_LOG_LENGTH) {
+      return newLog.slice(newLog.length - MAX_LOG_LENGTH);
     }
-    return next;
+
+    const totalLength = currentLog.length + newLog.length;
+    // If total length fits, just concatenate
+    if (totalLength <= MAX_LOG_LENGTH) {
+      return currentLog + newLog;
+    }
+
+    // We need to trim from the beginning of currentLog to make room for newLog
+    // Calculate how many characters to keep from currentLog
+    const keepLength = MAX_LOG_LENGTH - newLog.length;
+    return currentLog.slice(currentLog.length - keepLength) + newLog;
   }, []);
 
   const refreshCases = useCallback(async () => {
