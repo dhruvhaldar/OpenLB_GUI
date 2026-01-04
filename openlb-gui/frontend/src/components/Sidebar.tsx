@@ -41,8 +41,8 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
           <button
             onClick={onRefresh}
             className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-            aria-label="Refresh cases"
-            title="Refresh cases"
+            aria-label={isLoading ? "Refreshing cases..." : "Refresh cases"}
+            title={isLoading ? "Refreshing..." : "Refresh cases"}
             disabled={isLoading}
           >
             <RefreshCw
