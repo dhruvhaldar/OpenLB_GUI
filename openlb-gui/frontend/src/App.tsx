@@ -344,9 +344,11 @@ function App() {
                     </button>
                     <button
                         onClick={handleCopyOutput}
-                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                        aria-label="Copy output"
-                        title="Copy to clipboard"
+                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                          copyStatus === 'copied' ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
+                        }`}
+                        aria-label={copyStatus === 'copied' ? "Copied successfully" : "Copy output"}
+                        title={copyStatus === 'copied' ? "Copied!" : "Copy to clipboard"}
                     >
                         {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
                     </button>
