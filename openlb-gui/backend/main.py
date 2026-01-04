@@ -103,6 +103,11 @@ def validate_case_path(path_str: str) -> str:
              logger.warning(f"Access denied for path: {repr(path_str)}")
              raise HTTPException(status_code=403, detail="Access denied")
 
+        # Security check: Prevent operations on the root cases directory itself
+        if target_path == CASES_PATH:
+             logger.warning(f"Attempted operation on root cases directory: {repr(path_str)}")
+             raise HTTPException(status_code=403, detail="Access denied: Cannot operate on root cases directory")
+
         return str(target_path)
     except (ValueError, RuntimeError):
         # Handle cases where is_relative_to might fail or other path errors
