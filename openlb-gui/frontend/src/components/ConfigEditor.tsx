@@ -71,6 +71,9 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
         aria-labelledby="config-editor-title"
         defaultValue={initialContent}
         onKeyDown={handleKeyDown}
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
         className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
     </div>

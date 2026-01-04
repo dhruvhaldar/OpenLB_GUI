@@ -17,9 +17,19 @@ interface LogViewerProps {
  */
 const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
   const logRef = useRef<HTMLPreElement>(null);
+  // Default to true so it scrolls on first load
+  const isAtBottomRef = useRef(true);
+
+  const handleScroll = () => {
+    if (!logRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = logRef.current;
+    // We consider "at bottom" if within 50px of the bottom to allow for some buffer
+    isAtBottomRef.current = scrollHeight - scrollTop - clientHeight < 50;
+  };
 
   useEffect(() => {
-    if (logRef.current) {
+    // Only auto-scroll if the user was already at the bottom
+    if (logRef.current && isAtBottomRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
     }
   }, [output]);
@@ -27,6 +37,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
   return (
     <pre
       ref={logRef}
+      onScroll={handleScroll}
       role="log"
       tabIndex={0}
       aria-label="Process Output"
