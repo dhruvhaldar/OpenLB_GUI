@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useLayoutEffect, useRef } from 'react';
 
 interface LogViewerProps {
   output: string;
@@ -27,7 +27,11 @@ const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
     isAtBottomRef.current = scrollHeight - scrollTop - clientHeight < 50;
   };
 
-  useEffect(() => {
+  // Optimization: Use useLayoutEffect instead of useEffect to update scroll position synchronously
+  // before the browser paints. This prevents a visual "jump" where the new content is rendered
+  // at the old scroll position first, then immediately scrolled to the bottom.
+  // It ensures the user sees the logs appearing at the correct position instantly.
+  useLayoutEffect(() => {
     // Only auto-scroll if the user was already at the bottom
     if (logRef.current && isAtBottomRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
