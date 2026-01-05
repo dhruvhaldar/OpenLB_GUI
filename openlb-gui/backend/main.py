@@ -224,6 +224,13 @@ def list_cases():
                         "domain": "Uncategorized"
                     })
 
+                    # Performance Optimization:
+                    # If the directory is already identified as a Case (has Makefile), we treat it as a leaf node.
+                    # We skip scanning its children to avoid iterating over potentially thousands of build artifacts
+                    # or output files (e.g. .vtk files) often found in the case root.
+                    # This enforces a structure where a Case cannot contain other Cases.
+                    continue
+
                 # Level 2 check (CASES_DIR/Domain/Case/Makefile)
                 # If we passed the symlink check above, it's safe to scan children
                 try:
