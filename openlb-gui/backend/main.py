@@ -393,8 +393,35 @@ def save_config(req: ConfigRequest):
     logger.info(f"Saving config for: {safe_path} (size: {len(req.content)} bytes)")
 
     config_path = os.path.join(safe_path, "config.xml")
-    with open(config_path, "w") as f:
-        f.write(req.content)
+
+    # Security Enhancement: Atomic Write
+    # Write to a temporary file first, then rename it to the target file.
+    # This prevents data corruption (partial writes) and ensures atomicity.
+    # We use delete=False because we want to rename it, not delete it.
+    # We create it in the same directory (safe_path) to ensure rename is atomic (same filesystem).
+    tmp_name = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', dir=safe_path, delete=False, suffix=".tmp") as tmp:
+            tmp_name = tmp.name
+            # Set permissions to 644 (owner rw, group r, other r) to match standard behavior
+            # tempfile defaults to 600 which might be too restrictive if other users/groups need read access
+            os.chmod(tmp_name, 0o644)
+            tmp.write(req.content)
+            tmp.flush()
+            os.fsync(tmp.fileno()) # Ensure data is written to disk
+
+        # Atomically replace (os.replace works on Windows too)
+        os.replace(tmp_name, config_path)
+    except Exception as e:
+        logger.error(f"Failed to save config: {e}")
+        # Clean up temp file if it exists
+        if tmp_name and os.path.exists(tmp_name):
+            try:
+                os.remove(tmp_name)
+            except OSError:
+                pass
+        raise HTTPException(status_code=500, detail="Failed to save configuration")
+
     return {"success": True}
 
 if __name__ == "__main__":
