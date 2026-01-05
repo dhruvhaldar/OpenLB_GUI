@@ -37,6 +37,15 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     }
   };
 
+  const getButtonTitle = () => {
+    switch (saveStatus) {
+      case 'saving': return 'Saving...';
+      case 'saved': return 'Configuration Saved';
+      case 'error': return 'Save Failed - Click to retry';
+      default: return 'Save (Ctrl+S)';
+    }
+  };
+
   return (
     <div className={`flex flex-col ${className || ''}`}>
       <div className="flex justify-between items-center mb-2">
@@ -46,7 +55,7 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
         <button
           onClick={handleSave}
           disabled={saveStatus === 'saving'}
-          title="Save (Ctrl+S)"
+          title={getButtonTitle()}
           aria-keyshortcuts="Control+S"
           className={`text-sm flex items-center gap-2 px-3 py-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
             saveStatus === 'saved'
@@ -63,7 +72,7 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
           ) : (
             <Save size={14} />
           )}
-          {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Error' : 'Save'}
+          {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Failed' : 'Save'}
         </button>
       </div>
       <textarea
