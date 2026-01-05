@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi import Request
 from pydantic import BaseModel, field_validator, Field
 import os
 import subprocess
@@ -9,6 +10,8 @@ import tempfile
 import re
 import threading
 import shutil
+import time
+from collections import defaultdict
 from pathlib import Path
 
 # Configure logging
@@ -19,6 +22,33 @@ logging.basicConfig(
 logger = logging.getLogger("openlb-backend")
 
 app = FastAPI()
+
+# Rate Limiting Middleware
+# Protects sensitive endpoints from DoS and abuse
+class RateLimiter:
+    def __init__(self, requests_per_minute: int = 5):
+        self.limit = requests_per_minute
+        self.requests = defaultdict(list)
+        # Clean up old entries periodically (in a real app, use Redis)
+        self.last_cleanup = time.time()
+
+    def is_rate_limited(self, ip: str) -> bool:
+        now = time.time()
+        # Simple cleanup every minute
+        if now - self.last_cleanup > 60:
+            self.requests.clear()
+            self.last_cleanup = now
+
+        # Filter out requests older than 1 minute
+        self.requests[ip] = [t for t in self.requests[ip] if now - t < 60]
+
+        if len(self.requests[ip]) >= self.limit:
+            return True
+
+        self.requests[ip].append(now)
+        return False
+
+rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive actions
 
 # Allow CORS for frontend dev
 # Restrict to standard local dev ports to prevent access from arbitrary sites
@@ -32,7 +62,21 @@ app.add_middleware(
 
 # Security Headers Middleware
 @app.middleware("http")
-async def add_security_headers(request, call_next):
+async def add_security_headers(request: Request, call_next):
+    # Rate Limiting for state-changing operations
+    # We apply this before processing the request
+    if request.method in ["POST", "DELETE"] and request.url.path in ["/build", "/run", "/cases/duplicate", "/cases"]:
+        client_ip = request.client.host if request.client else "unknown"
+        if rate_limiter.is_rate_limited(client_ip):
+            logger.warning(f"Rate limit exceeded for {client_ip} on {request.url.path}")
+            # We return a JSON response directly for 429
+            # Note: We can't easily raise HTTPException in middleware, so we return Response
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."}
+            )
+
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
