@@ -20,6 +20,16 @@ const SidebarItem = memo(({ item, isSelected, onSelect }: SidebarItemProps) => {
       <span className="truncate">{item.name}</span>
     </button>
   );
+}, (prev, next) => {
+  // Optimization: Custom comparison to prevent re-renders when parent 'cases' list is refreshed
+  // but this individual item hasn't changed. Standard React.memo (shallow compare) fails here
+  // because the 'item' object reference changes on every fetch.
+  return (
+    prev.isSelected === next.isSelected &&
+    prev.item.id === next.item.id &&
+    prev.item.name === next.item.name &&
+    prev.onSelect === next.onSelect
+  );
 });
 
 interface SidebarProps {
