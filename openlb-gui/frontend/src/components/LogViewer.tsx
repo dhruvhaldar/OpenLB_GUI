@@ -34,6 +34,11 @@ const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
   const scrollToBottom = () => {
     if (logRef.current) {
       logRef.current.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
+      // UX Improvement: Move focus to the log container when button is clicked.
+      // Since the button will disappear (unmount) when at the bottom, we need to ensure
+      // focus is not lost (which would reset to body). This allows keyboard users
+      // to continue navigating the logs immediately.
+      logRef.current.focus({ preventScroll: true });
     }
   };
 
@@ -64,6 +69,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
         <button
           onClick={scrollToBottom}
           aria-label="Scroll to bottom"
+          title="Scroll to bottom"
           className="absolute bottom-4 right-4 p-2 bg-gray-700/80 text-white rounded-full shadow-lg hover:bg-gray-600 backdrop-blur-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 animate-in fade-in slide-in-from-bottom-2"
         >
           <ArrowDown size={20} />
