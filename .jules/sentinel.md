@@ -1,4 +1,4 @@
-## 2026-01-02 - Symlink Path Traversal in File Listings
-**Vulnerability:** The `glob` module (and `glob.iglob`) follows symbolic links by default. If `list_cases` scans a directory containing a symlink to a sensitive external directory, it will list the contents (or the symlink itself as a valid entry) without checking if the *resolved* path is still within the intended root. This leads to Information Disclosure.
-**Learning:** Checking input paths at the *access* time (e.g., via `validate_case_path` or `is_relative_to`) is necessary but not sufficient for preventing information leaks during *enumeration* or *listing*.
-**Prevention:** Always verify that `Path(p).resolve().is_relative_to(ROOT)` is true for every file/directory returned by a scanner/globber before exposing it to the API response.
+## 2026-01-06 - Rate Limiter Bypass Mitigation
+**Vulnerability:** The rate limiter relied on a hardcoded allowlist of paths (e.g., `/build`, `/run`). This pattern is fragile because new sensitive endpoints might be forgotten, and path manipulation (e.g., `//build` depending on normalization) could potentially bypass the check.
+**Learning:** Allow-lists for security controls on specific paths are prone to "Maintenance Oversight" and normalization bypasses.
+**Prevention:** Switch to a "Secure by Default" Generic Rule. Apply controls based on the HTTP Method (POST, PUT, DELETE, PATCH) which covers *all* state-changing operations automatically, regardless of the path.

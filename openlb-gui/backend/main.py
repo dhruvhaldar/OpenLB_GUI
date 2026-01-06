@@ -66,7 +66,8 @@ app.add_middleware(
 async def add_security_headers(request: Request, call_next):
     # Rate Limiting for state-changing operations
     # We apply this before processing the request
-    if request.method in ["POST", "DELETE"] and request.url.path in ["/build", "/run", "/cases/duplicate", "/cases"]:
+    # Sentinel: Broadened scope to all state-changing methods to prevent bypasses and future oversight
+    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
         client_ip = request.client.host if request.client else "unknown"
         if rate_limiter.is_rate_limited(client_ip):
             logger.warning(f"Rate limit exceeded for {client_ip} on {request.url.path}")
