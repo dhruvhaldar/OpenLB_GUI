@@ -105,6 +105,13 @@ execution_lock = threading.Lock()
 # \x0a-\x1f matches 10-31
 CONTROL_CHARS = re.compile(r'[\x00-\x08\x0a-\x1f]')
 
+# Pre-compile Regexes for Validation Hot Paths
+# Optimization: Pre-compiling regexes avoids cache lookup overhead and recompilation
+# for patterns used in every request (config validation, duplicate checks).
+XXE_DOCTYPE_PATTERN = re.compile(r'<!\s*DOCTYPE', re.IGNORECASE)
+XXE_ENTITY_PATTERN = re.compile(r'<!\s*ENTITY', re.IGNORECASE)
+VALID_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
+
 # Allowed environment variables to pass to subprocesses
 SAFE_ENV_VARS = {
     'PATH', 'LANG', 'LC_ALL', 'TERM', 'LD_LIBRARY_PATH',
@@ -180,7 +187,8 @@ class ConfigRequest(BaseModel):
         # XXE Prevention: Reject DTD declarations
         # If the backend or simulation parses this XML, DTDs enable XXE attacks
         # Use regex to catch variations with whitespace
-        if re.search(r'<!\s*DOCTYPE', v, re.IGNORECASE) or re.search(r'<!\s*ENTITY', v, re.IGNORECASE):
+        # Performance Optimization: Use pre-compiled regex patterns
+        if XXE_DOCTYPE_PATTERN.search(v) or XXE_ENTITY_PATTERN.search(v):
             raise ValueError('XML Document Type Definitions (DTD) are not allowed for security reasons')
 
         return v
@@ -191,7 +199,8 @@ def duplicate_case(req: DuplicateRequest):
     safe_source = validate_case_path(req.source_path)
     logger.info(f"Duplicating case: {safe_source} to name: {req.new_name}")
 
-    if not re.match(r'^[a-zA-Z0-9_-]+$', req.new_name):
+    # Performance Optimization: Use pre-compiled regex
+    if not VALID_NAME_PATTERN.match(req.new_name):
         raise HTTPException(status_code=400, detail="Invalid name. Use alphanumeric, underscore, and hyphen only.")
 
     parent_dir = os.path.dirname(safe_source)
