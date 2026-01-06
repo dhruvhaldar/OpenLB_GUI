@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Body
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi import Request
@@ -207,7 +208,11 @@ def duplicate_case(req: DuplicateRequest):
         raise HTTPException(status_code=409, detail="Case with this name already exists")
 
     try:
-        shutil.copytree(safe_source, target_path)
+        # Security Fix: Use symlinks=True to prevent dereferencing symlinks.
+        # If symlinks=False (default), a symlink to /etc/passwd in the source would be copied
+        # as the actual file content, leading to arbitrary file read / disclosure.
+        # It also prevents infinite recursion if a symlink points to a parent directory.
+        shutil.copytree(safe_source, target_path, symlinks=True)
         return {"success": True, "new_path": target_path}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
