@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException, Body
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi import Request
+from fastapi import Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator, Field
 import os
 import subprocess
@@ -51,6 +52,19 @@ class RateLimiter:
 
 rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive actions
 
+class LimitUploadSize(BaseHTTPMiddleware):
+    def __init__(self, app, max_upload_size: int) -> None:
+        super().__init__(app)
+        self.max_upload_size = max_upload_size
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method == 'POST':
+            if 'content-length' in request.headers:
+                content_length = int(request.headers['content-length'])
+                if content_length > self.max_upload_size:
+                    return Response("Request body too large", status_code=413)
+        return await call_next(request)
+
 # Allow CORS for frontend dev
 # Restrict to standard local dev ports to prevent access from arbitrary sites
 app.add_middleware(
@@ -87,6 +101,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=()"
     return response
 
+app.add_middleware(LimitUploadSize, max_upload_size=2 * 1024 * 1024) # 2MB limit
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Resolve cases directory relative to the project root (2 levels up from backend/main.py)
