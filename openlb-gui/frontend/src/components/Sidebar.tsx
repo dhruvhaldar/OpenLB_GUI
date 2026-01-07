@@ -93,8 +93,16 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
                 </li>
               ))
             ) : (
-              <li className="text-gray-500 text-sm px-3 py-2 italic text-center">
-                No cases found
+              <li className="px-4 py-8 text-center flex flex-col items-center gap-3">
+                <div className="bg-gray-700/50 p-3 rounded-full">
+                  <Folder className="text-gray-500" size={24} aria-hidden="true" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-gray-400 font-medium text-sm">No cases found</p>
+                  <p className="text-gray-500 text-xs px-2">
+                    Add simulation cases to the <code className="bg-gray-800 px-1 py-0.5 rounded text-gray-300 font-mono">my_cases</code> directory.
+                  </p>
+                </div>
               </li>
             )}
           </ul>
