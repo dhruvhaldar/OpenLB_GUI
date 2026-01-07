@@ -168,6 +168,24 @@ def validate_case_path(path_str: str) -> str:
         logger.error(f"Error validating path: {repr(path_str)}")
         raise HTTPException(status_code=403, detail="Access denied")
 
+def read_log_tail(file_obj, limit_bytes=100 * 1024) -> str:
+    """
+    Reads the tail (end) of a file object.
+    If the file is larger than limit_bytes, it reads the last limit_bytes
+    and prepends a truncation message.
+    """
+    file_obj.seek(0, 2) # Seek to end
+    size = file_obj.tell()
+
+    if size > limit_bytes:
+        file_obj.seek(size - limit_bytes)
+        raw = file_obj.read()
+        # Decode with replace to handle potentially cut multi-byte characters
+        return "[... Output truncated at beginning ...]\n" + raw.decode('utf-8', errors='replace')
+    else:
+        file_obj.seek(0)
+        return file_obj.read().decode('utf-8', errors='replace')
+
 class CommandRequest(BaseModel):
     case_path: str = Field(..., max_length=4096)
 
@@ -341,7 +359,10 @@ def build_case(req: CommandRequest):
         try:
             # Run make
             # Use a temporary file to capture output to avoid memory exhaustion (DoS)
-            with tempfile.TemporaryFile(mode='w+') as tmp:
+            # Performance Optimization: Use binary mode ('w+b') to enable efficient seeking
+            # and tail reading. This allows us to read only the most relevant part of the log
+            # (the end) without loading the entire file into memory or sending useless data.
+            with tempfile.TemporaryFile(mode='w+b') as tmp:
                 # Use sanitized environment to prevent secret leakage
                 result = subprocess.run(
                     ["make"],
@@ -349,16 +370,17 @@ def build_case(req: CommandRequest):
                     env=get_safe_env(),
                     stdout=tmp,
                     stderr=subprocess.STDOUT,
-                    text=True,
+                    text=False, # Binary output for efficient seeking
                     check=False,
                     timeout=300  # 5 minute timeout
                 )
 
-                # Read back only a safe amount of output
-                tmp.seek(0)
-                output = tmp.read(512 * 1024) # 512KB limit
-                if tmp.read(1):
-                    output += "\n[Output truncated due to size limit]"
+                # Performance Optimization: Tail Reading
+                # Instead of reading the first 512KB (which often misses the error at the end),
+                # we read the LAST 100KB (matching the frontend's display limit).
+                # This reduces network payload by ~80% (512KB -> 100KB) and ensures
+                # the user sees the critical error message usually located at the end of the log.
+                output = read_log_tail(tmp)
 
                 return {
                     "success": result.returncode == 0,
@@ -393,7 +415,8 @@ def run_case(req: CommandRequest):
         try:
             # Run make run
             # Use a temporary file to capture output to avoid memory exhaustion (DoS)
-            with tempfile.TemporaryFile(mode='w+') as tmp:
+            # Performance Optimization: Use binary mode ('w+b') for efficient tail reading
+            with tempfile.TemporaryFile(mode='w+b') as tmp:
                 # Use sanitized environment to prevent secret leakage
                 result = subprocess.run(
                     ["make", "run"],
@@ -401,16 +424,13 @@ def run_case(req: CommandRequest):
                     env=get_safe_env(),
                     stdout=tmp,
                     stderr=subprocess.STDOUT,
-                    text=True,
+                    text=False, # Binary output
                     check=False,
                     timeout=600  # 10 minute timeout
                 )
 
-                # Read back only a safe amount of output
-                tmp.seek(0)
-                output = tmp.read(512 * 1024) # 512KB limit
-                if tmp.read(1):
-                    output += "\n[Output truncated due to size limit]"
+                # Performance Optimization: Tail Reading (see build_case for details)
+                output = read_log_tail(tmp)
 
                 return {
                     "success": result.returncode == 0,
