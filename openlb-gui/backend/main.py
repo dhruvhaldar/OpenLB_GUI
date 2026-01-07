@@ -171,6 +171,14 @@ def validate_case_path(path_str: str) -> str:
              logger.warning(f"Access denied for path: {repr(path_str)}")
              raise HTTPException(status_code=403, detail="Access denied")
 
+        # Security Enhancement: Prevent access to hidden files/directories (starting with .)
+        # Iterate over parts relative to CASES_PATH to check if any component is hidden
+        rel_path = target_path.relative_to(CASES_PATH)
+        for part in rel_path.parts:
+            if part.startswith('.'):
+                logger.warning(f"Access denied for hidden path: {repr(path_str)}")
+                raise HTTPException(status_code=403, detail="Access denied: Hidden paths are restricted")
+
         # Security check: Prevent operations on the root cases directory itself
         if target_path == CASES_PATH:
              logger.warning(f"Attempted operation on root cases directory: {repr(path_str)}")
