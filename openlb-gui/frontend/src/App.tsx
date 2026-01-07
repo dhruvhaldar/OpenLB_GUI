@@ -17,6 +17,8 @@ function App() {
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+  const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Optimization: Cache config content to avoid unnecessary network requests
   const configCache = useRef<Record<string, string>>({});
@@ -181,6 +183,7 @@ function App() {
     const newName = window.prompt('Enter new name for the case (alphanumeric, -, _):');
     if (!newName) return;
 
+    setIsDuplicating(true);
     try {
       const res = await fetch(`${API_URL}/cases/duplicate`, {
         method: 'POST',
@@ -206,6 +209,8 @@ function App() {
     } catch (e) {
       console.error('Duplicate failed', e);
       alert('Failed to duplicate case');
+    } finally {
+      setIsDuplicating(false);
     }
   };
 
@@ -213,6 +218,7 @@ function App() {
     if (!selectedCase) return;
     if (!window.confirm(`Are you sure you want to delete "${selectedCase.name}"? This action cannot be undone.`)) return;
 
+    setIsDeleting(true);
     try {
       const res = await fetch(`${API_URL}/cases?case_path=${encodeURIComponent(selectedCase.path)}`, {
         method: 'DELETE'
@@ -232,6 +238,8 @@ function App() {
     } catch (e) {
       console.error('Delete failed', e);
       alert('Failed to delete case');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -261,19 +269,21 @@ function App() {
                 <div className="flex gap-1">
                   <button
                     onClick={handleDuplicate}
-                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                    title="Duplicate Case"
-                    aria-label="Duplicate Case"
+                    disabled={isDuplicating}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50"
+                    title={isDuplicating ? "Duplicating..." : "Duplicate Case"}
+                    aria-label={isDuplicating ? "Duplicating case..." : "Duplicate Case"}
                   >
-                    <CopyPlus size={18} />
+                    {isDuplicating ? <Loader2 size={18} className="animate-spin" /> : <CopyPlus size={18} />}
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                    title="Delete Case"
-                    aria-label="Delete Case"
+                    disabled={isDeleting}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50"
+                    title={isDeleting ? "Deleting..." : "Delete Case"}
+                    aria-label={isDeleting ? "Deleting case..." : "Delete Case"}
                   >
-                    <Trash2 size={18} />
+                    {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                   </button>
                 </div>
               </div>
