@@ -113,6 +113,11 @@ XXE_DOCTYPE_PATTERN = re.compile(r'<!\s*DOCTYPE', re.IGNORECASE)
 XXE_ENTITY_PATTERN = re.compile(r'<!\s*ENTITY', re.IGNORECASE)
 VALID_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
 
+# Optimization: Limit captured output size to match frontend display capacity.
+# Frontend truncates logs to 100,000 characters. Sending more wastes bandwidth and memory.
+# We set it slightly higher (100KB bytes) to ensure we capture enough context.
+MAX_LOG_OUTPUT = 100000
+
 # Allowed environment variables to pass to subprocesses
 SAFE_ENV_VARS = {
     'PATH', 'LANG', 'LC_ALL', 'TERM', 'LD_LIBRARY_PATH',
@@ -341,7 +346,8 @@ def build_case(req: CommandRequest):
         try:
             # Run make
             # Use a temporary file to capture output to avoid memory exhaustion (DoS)
-            with tempfile.TemporaryFile(mode='w+') as tmp:
+            # Use binary mode (w+b) to allow seeking from end for tail truncation
+            with tempfile.TemporaryFile(mode='w+b') as tmp:
                 # Use sanitized environment to prevent secret leakage
                 result = subprocess.run(
                     ["make"],
@@ -349,16 +355,25 @@ def build_case(req: CommandRequest):
                     env=get_safe_env(),
                     stdout=tmp,
                     stderr=subprocess.STDOUT,
-                    text=True,
+                    text=False, # Binary output
                     check=False,
                     timeout=300  # 5 minute timeout
                 )
 
-                # Read back only a safe amount of output
-                tmp.seek(0)
-                output = tmp.read(512 * 1024) # 512KB limit
-                if tmp.read(1):
-                    output += "\n[Output truncated due to size limit]"
+                # Optimization: Read only the TAIL of the log if it exceeds the limit.
+                # This ensures the user sees the most relevant info (errors usually at end)
+                # and keeps payload size small (matching frontend limit).
+                file_size = os.fstat(tmp.fileno()).st_size
+
+                if file_size > MAX_LOG_OUTPUT:
+                    # Seek to end - limit
+                    tmp.seek(-MAX_LOG_OUTPUT, 2)
+                    output_bytes = tmp.read(MAX_LOG_OUTPUT)
+                    output = "[Output truncated...]\n" + output_bytes.decode('utf-8', errors='replace')
+                else:
+                    tmp.seek(0)
+                    output_bytes = tmp.read()
+                    output = output_bytes.decode('utf-8', errors='replace')
 
                 return {
                     "success": result.returncode == 0,
@@ -393,7 +408,8 @@ def run_case(req: CommandRequest):
         try:
             # Run make run
             # Use a temporary file to capture output to avoid memory exhaustion (DoS)
-            with tempfile.TemporaryFile(mode='w+') as tmp:
+            # Use binary mode (w+b) to allow seeking from end for tail truncation
+            with tempfile.TemporaryFile(mode='w+b') as tmp:
                 # Use sanitized environment to prevent secret leakage
                 result = subprocess.run(
                     ["make", "run"],
@@ -401,16 +417,25 @@ def run_case(req: CommandRequest):
                     env=get_safe_env(),
                     stdout=tmp,
                     stderr=subprocess.STDOUT,
-                    text=True,
+                    text=False, # Binary output
                     check=False,
                     timeout=600  # 10 minute timeout
                 )
 
-                # Read back only a safe amount of output
-                tmp.seek(0)
-                output = tmp.read(512 * 1024) # 512KB limit
-                if tmp.read(1):
-                    output += "\n[Output truncated due to size limit]"
+                # Optimization: Read only the TAIL of the log if it exceeds the limit.
+                # This ensures the user sees the most relevant info (errors usually at end)
+                # and keeps payload size small (matching frontend limit).
+                file_size = os.fstat(tmp.fileno()).st_size
+
+                if file_size > MAX_LOG_OUTPUT:
+                    # Seek to end - limit
+                    tmp.seek(-MAX_LOG_OUTPUT, 2)
+                    output_bytes = tmp.read(MAX_LOG_OUTPUT)
+                    output = "[Output truncated...]\n" + output_bytes.decode('utf-8', errors='replace')
+                else:
+                    tmp.seek(0)
+                    output_bytes = tmp.read()
+                    output = output_bytes.decode('utf-8', errors='replace')
 
                 return {
                     "success": result.returncode == 0,
