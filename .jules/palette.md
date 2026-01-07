@@ -7,3 +7,7 @@
 ## 2024-05-22 - Dynamic Button Feedback
 **Learning:** Icon-only buttons that change state (like "Copy") need dynamic ARIA labels and titles to convey success/loading states to both screen readers and tooltips. Static labels like "Copy output" are confusing when the visual icon becomes a Checkmark.
 **Action:** Always update `aria-label` and `title` when the button's visual state or icon changes.
+
+## 2024-05-23 - Async Action Feedback
+**Learning:** Destructive or complex actions (like Delete/Duplicate) often feel broken if they use blocking alerts/prompts without immediate UI feedback on the trigger element. The UI freezes or seems unresponsive until the native dialog appears or the operation completes.
+**Action:** Use inline loading states (spinners) on the trigger button itself *before* and *during* the async operation, even if using native dialogs, to bridge the gap between user intent and system response.
