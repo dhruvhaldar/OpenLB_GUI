@@ -65,11 +65,18 @@ class LimitUploadSize(BaseHTTPMiddleware):
         self.max_upload_size = max_upload_size
 
     async def dispatch(self, request: Request, call_next):
-        if request.method == 'POST':
-            if 'content-length' in request.headers:
-                content_length = int(request.headers['content-length'])
-                if content_length > self.max_upload_size:
-                    return Response("Request body too large", status_code=413)
+        # Sentinel Enhancement: Secure by Default
+        # Apply checks to all methods that can carry a body to prevent bypasses.
+        if request.method in ["POST", "PUT", "PATCH"]:
+            # Security Fix: Enforce Content-Length
+            # Reject Chunked Encoding or requests without Content-Length to prevent
+            # Memory Exhaustion DoS attacks. The backend expects finite, known-size payloads (JSON/text).
+            if 'content-length' not in request.headers:
+                 return Response("Content-Length required", status_code=411)
+
+            content_length = int(request.headers['content-length'])
+            if content_length > self.max_upload_size:
+                return Response("Request body too large", status_code=413)
         return await call_next(request)
 
 # Allow CORS for frontend dev
