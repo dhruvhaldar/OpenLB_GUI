@@ -13,7 +13,7 @@ import re
 import threading
 import shutil
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 from pathlib import Path
 
 # Configure logging
@@ -30,24 +30,31 @@ app = FastAPI()
 class RateLimiter:
     def __init__(self, requests_per_minute: int = 5):
         self.limit = requests_per_minute
-        self.requests = defaultdict(list)
+        # Performance Optimization: Use deque for O(1) pops from the left
+        # instead of O(N) list slicing/re-allocation during cleanup.
+        self.requests = defaultdict(deque)
         # Clean up old entries periodically (in a real app, use Redis)
         self.last_cleanup = time.time()
 
     def is_rate_limited(self, ip: str) -> bool:
         now = time.time()
-        # Simple cleanup every minute
+        # Simple cleanup every minute to prevent memory leak from old IPs
         if now - self.last_cleanup > 60:
             self.requests.clear()
             self.last_cleanup = now
 
-        # Filter out requests older than 1 minute
-        self.requests[ip] = [t for t in self.requests[ip] if now - t < 60]
+        dq = self.requests[ip]
 
-        if len(self.requests[ip]) >= self.limit:
+        # Efficiently remove expired requests from the left (oldest first)
+        # O(k) where k is the number of expired requests (usually small)
+        # This avoids copying the entire list as list comprehension would do.
+        while dq and now - dq[0] > 60:
+            dq.popleft()
+
+        if len(dq) >= self.limit:
             return True
 
-        self.requests[ip].append(now)
+        dq.append(now)
         return False
 
 rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive actions
