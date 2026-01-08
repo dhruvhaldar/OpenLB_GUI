@@ -1,4 +1,4 @@
-import React, { memo, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { ArrowDown } from 'lucide-react';
 
 interface LogViewerProps {
@@ -21,15 +21,35 @@ const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
   // Default to true so it scrolls on first load
   const isAtBottomRef = useRef(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const scrollRafRef = useRef<number | null>(null);
 
   const handleScroll = () => {
-    if (!logRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = logRef.current;
-    // We consider "at bottom" if within 50px of the bottom to allow for some buffer
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-    isAtBottomRef.current = isAtBottom;
-    setShowScrollButton(!isAtBottom);
+    // Optimization: Throttling scroll event with requestAnimationFrame
+    // Scroll events fire at a high rate (often 60fps+). Reading layout properties (scrollTop, scrollHeight)
+    // forces a browser reflow (layout calculation) which is expensive.
+    // By using requestAnimationFrame, we ensure we only perform this check once per frame,
+    // avoiding layout thrashing and improving scroll performance.
+    if (scrollRafRef.current) return;
+
+    scrollRafRef.current = requestAnimationFrame(() => {
+      if (logRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = logRef.current;
+        // We consider "at bottom" if within 50px of the bottom to allow for some buffer
+        const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+        isAtBottomRef.current = isAtBottom;
+        setShowScrollButton(!isAtBottom);
+      }
+      scrollRafRef.current = null;
+    });
   };
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
 
   const scrollToBottom = () => {
     if (logRef.current) {
