@@ -1,5 +1,5 @@
 import React, { memo, useState, useEffect, useRef } from 'react';
-import { FileText, Save, Check, Loader2 } from 'lucide-react';
+import { FileText, Save, Check, Loader2, Copy } from 'lucide-react';
 
 interface ConfigEditorProps {
   initialContent: string;
@@ -9,7 +9,10 @@ interface ConfigEditorProps {
 
 const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastSavedContent = useRef(initialContent);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [isDirty, setIsDirty] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
   useEffect(() => {
     if (saveStatus === 'saved') {
@@ -18,6 +21,23 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     }
   }, [saveStatus]);
 
+  useEffect(() => {
+    if (copyStatus !== 'idle') {
+      const timer = setTimeout(() => setCopyStatus('idle'), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copyStatus]);
+
+  const handleCopy = async () => {
+    try {
+      const currentContent = textareaRef.current?.value || '';
+      await navigator.clipboard.writeText(currentContent);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+  };
+
   const handleSave = async () => {
     setSaveStatus('saving');
     try {
@@ -25,8 +45,16 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
       const currentContent = textareaRef.current?.value || '';
       await onSave(currentContent);
       setSaveStatus('saved');
+      lastSavedContent.current = currentContent;
+      setIsDirty(false);
     } catch {
       setSaveStatus('error');
+    }
+  };
+
+  const handleChange = () => {
+    if (textareaRef.current) {
+      setIsDirty(textareaRef.current.value !== lastSavedContent.current);
     }
   };
 
@@ -42,7 +70,7 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
       case 'saving': return 'Saving...';
       case 'saved': return 'Configuration Saved';
       case 'error': return 'Save Failed - Click to retry';
-      default: return 'Save (Ctrl+S)';
+      default: return isDirty ? 'Unsaved changes (Ctrl+S)' : 'Save (Ctrl+S)';
     }
   };
 
@@ -52,8 +80,19 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
         <h3 id="config-editor-title" className="font-semibold text-gray-400 flex items-center gap-2">
           <FileText size={16} /> Configuration
         </h3>
-        <button
-          onClick={handleSave}
+        <div className="flex gap-2">
+          <button
+            onClick={handleCopy}
+            className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+              copyStatus === 'copied' ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
+            }`}
+            aria-label={copyStatus === 'copied' ? "Copied configuration" : "Copy configuration"}
+            title={copyStatus === 'copied' ? "Copied!" : "Copy configuration"}
+          >
+            {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
+          </button>
+          <button
+            onClick={handleSave}
           disabled={saveStatus === 'saving'}
           title={getButtonTitle()}
           aria-keyshortcuts="Control+S"
@@ -63,6 +102,8 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
               ? 'text-green-400 hover:text-green-300'
               : saveStatus === 'error'
               ? 'text-red-400 hover:text-red-300'
+              : isDirty
+              ? 'text-amber-400 hover:text-amber-300 bg-gray-800'
               : 'text-blue-400 hover:text-blue-300 hover:bg-gray-800'
           }`}
         >
@@ -73,14 +114,16 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
           ) : (
             <Save size={14} />
           )}
-          {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Failed' : 'Save'}
+          {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Failed' : isDirty ? 'Save*' : 'Save'}
         </button>
+        </div>
       </div>
       <textarea
         ref={textareaRef}
         aria-labelledby="config-editor-title"
         defaultValue={initialContent}
         onKeyDown={handleKeyDown}
+        onChange={handleChange}
         spellCheck={false}
         autoCorrect="off"
         autoCapitalize="off"
