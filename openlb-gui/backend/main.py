@@ -479,6 +479,15 @@ def get_config(path: str):
     config_path = os.path.join(safe_path, "config.xml")
 
     try:
+        # Security Fix: Prevent Arbitrary File Read via Symlinks (CWE-59)
+        # Even though safe_path (the directory) is validated, config.xml could be a symlink
+        # pointing to a sensitive file outside the permitted directory (e.g. /etc/passwd).
+        # We unconditionally resolve the path to handle symlinks safely and avoid TOCTOU race conditions.
+        resolved_config = Path(config_path).resolve()
+        if not resolved_config.is_relative_to(CASES_PATH):
+            logger.warning(f"Access denied: Config file points outside permitted area: {config_path} -> {resolved_config}")
+            raise HTTPException(status_code=403, detail="Access denied: Config file points outside safe directory")
+
         with open(config_path, "r") as f:
             # Check file size using fstat on the open file descriptor
             # This prevents TOCTOU (Time of Check to Time of Use) race conditions
