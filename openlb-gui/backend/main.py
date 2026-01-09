@@ -130,10 +130,9 @@ CASES_DIR = str(CASES_PATH)
 execution_lock = threading.Lock()
 
 # Pre-compile regex for control characters optimization
-# Matches any char < 32 (0x20) EXCEPT tab (0x09)
-# \x00-\x08 matches 0-8
-# \x0a-\x1f matches 10-31
-CONTROL_CHARS = re.compile(r'[\x00-\x08\x0a-\x1f]')
+# Matches any char < 32 (0x20) INCLUDING tab (0x09)
+# Security Fix: Rejecting tabs prevents Log Injection (CWE-117) and visual spoofing.
+CONTROL_CHARS = re.compile(r'[\x00-\x1f]')
 
 # Pre-compile Regexes for Validation Hot Paths
 # Optimization: Pre-compiling regexes avoids cache lookup overhead and recompilation
