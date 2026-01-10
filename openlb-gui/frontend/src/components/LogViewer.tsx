@@ -1,5 +1,5 @@
 import React, { memo, useLayoutEffect, useRef, useState, useEffect } from 'react';
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown, Terminal } from 'lucide-react';
 
 interface LogViewerProps {
   output: string;
@@ -75,17 +75,25 @@ const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
 
   return (
     <div className="flex-1 relative min-h-0 flex flex-col group">
-      <pre
-        ref={logRef}
-        onScroll={handleScroll}
-        role="log"
-        tabIndex={0}
-        aria-label="Process Output"
-        className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded scroll-smooth"
-      >
-        {output}
-      </pre>
-      {showScrollButton && (
+      {output ? (
+        <pre
+          ref={logRef}
+          onScroll={handleScroll}
+          role="log"
+          tabIndex={0}
+          aria-label="Process Output"
+          className="flex-1 overflow-auto text-green-400 font-mono text-sm p-2 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded scroll-smooth"
+        >
+          {output}
+        </pre>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center font-mono text-sm">
+          <Terminal size={48} className="mb-4 text-gray-600" aria-hidden="true" />
+          <p className="text-gray-400">No output generated yet.</p>
+          <p className="text-xs mt-1 text-gray-400/75">Run a simulation to view logs.</p>
+        </div>
+      )}
+      {showScrollButton && output && (
         <button
           onClick={scrollToBottom}
           aria-label="Scroll to bottom"
