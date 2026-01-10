@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo } from 'react';
+import React, { memo, useState, useMemo, useDeferredValue } from 'react';
 import { Folder, Activity, RefreshCw, Search } from 'lucide-react';
 import type { Case } from '../types';
 
@@ -42,15 +42,19 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, isLoading, onRefresh }) => {
   const [filter, setFilter] = useState('');
+  // Optimization: Defer the filter value to keep the input responsive.
+  // This allows the UI to update immediately while the potentially expensive
+  // list filtering and rendering happens in the background.
+  const deferredFilter = useDeferredValue(filter);
 
   const filteredCases = useMemo(() => {
-    if (!filter) return cases;
-    const lowerFilter = filter.toLowerCase();
+    if (!deferredFilter) return cases;
+    const lowerFilter = deferredFilter.toLowerCase();
     return cases.filter(c =>
       c.name.toLowerCase().includes(lowerFilter) ||
       c.domain.toLowerCase().includes(lowerFilter)
     );
-  }, [cases, filter]);
+  }, [cases, deferredFilter]);
 
   return (
     <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
