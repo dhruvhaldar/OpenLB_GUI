@@ -11,3 +11,7 @@
 ## 2024-05-23 - Async Action Feedback
 **Learning:** Destructive or complex actions (like Delete/Duplicate) often feel broken if they use blocking alerts/prompts without immediate UI feedback on the trigger element. The UI freezes or seems unresponsive until the native dialog appears or the operation completes.
 **Action:** Use inline loading states (spinners) on the trigger button itself *before* and *during* the async operation, even if using native dialogs, to bridge the gap between user intent and system response.
+
+## 2024-05-24 - Context-Aware Empty States
+**Learning:** When filtering a list, the empty state must distinguish between "no items exist" (collection empty) and "no items match" (filter too strict). Using a generic "No items" message during filtering can confuse users into thinking data is missing.
+**Action:** Always implement two distinct empty states for filtered lists: one for the zero-data state and one for the zero-results state.
