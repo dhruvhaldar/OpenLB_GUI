@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo, useRef } from 'react';
+import React, { memo, useState, useMemo, useRef, useDeferredValue } from 'react';
 import { Folder, Activity, RefreshCw, Search, X } from 'lucide-react';
 import type { Case } from '../types';
 
@@ -42,16 +42,20 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, isLoading, onRefresh }) => {
   const [filter, setFilter] = useState('');
+  // Optimization: Defer the filter value to keep the input responsive
+  // This allows the UI to update the input immediately while the list filtering (which could be expensive)
+  // happens in the background/next render, preventing input lag on large lists.
+  const deferredFilter = useDeferredValue(filter);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredCases = useMemo(() => {
-    if (!filter) return cases;
-    const lowerFilter = filter.toLowerCase();
+    if (!deferredFilter) return cases;
+    const lowerFilter = deferredFilter.toLowerCase();
     return cases.filter(c =>
       c.name.toLowerCase().includes(lowerFilter) ||
       c.domain.toLowerCase().includes(lowerFilter)
     );
-  }, [cases, filter]);
+  }, [cases, deferredFilter]);
 
   const handleClearFilter = () => {
     setFilter('');
