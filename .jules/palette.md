@@ -15,3 +15,7 @@
 ## 2024-05-24 - Context-Aware Empty States
 **Learning:** When filtering a list, the empty state must distinguish between "no items exist" (collection empty) and "no items match" (filter too strict). Using a generic "No items" message during filtering can confuse users into thinking data is missing.
 **Action:** Always implement two distinct empty states for filtered lists: one for the zero-data state and one for the zero-results state.
+
+## 2024-05-25 - Clearable Filters
+**Learning:** Real-time search filters are powerful but frustrating if users must manually backspace to clear them, especially on touch devices or when switching context quickly. A "Clear" button that appears when text is present significantly reduces friction.
+**Action:** Add a "Clear" (X) button inside search inputs that resets the value and returns focus to the input, and support the `Escape` key for the same action.
