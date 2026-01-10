@@ -1,5 +1,5 @@
-import React, { memo, useState, useMemo } from 'react';
-import { Folder, Activity, RefreshCw, Search } from 'lucide-react';
+import React, { memo, useState, useMemo, useRef } from 'react';
+import { Folder, Activity, RefreshCw, Search, X } from 'lucide-react';
 import type { Case } from '../types';
 
 interface SidebarItemProps {
@@ -42,6 +42,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, isLoading, onRefresh }) => {
   const [filter, setFilter] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredCases = useMemo(() => {
     if (!filter) return cases;
@@ -51,6 +52,17 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
       c.domain.toLowerCase().includes(lowerFilter)
     );
   }, [cases, filter]);
+
+  const handleClearFilter = () => {
+    setFilter('');
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleClearFilter();
+    }
+  };
 
   return (
     <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
@@ -79,13 +91,25 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
           <div className="relative">
             <Search className="absolute left-2 top-2.5 text-gray-500" size={14} />
             <input
+              ref={inputRef}
               type="text"
               placeholder="Filter cases..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full bg-gray-900 text-xs text-gray-300 rounded border border-gray-700 pl-8 pr-2 py-1.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-600"
+              onKeyDown={handleKeyDown}
+              className="w-full bg-gray-900 text-xs text-gray-300 rounded border border-gray-700 pl-8 pr-8 py-1.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-600"
               aria-label="Filter cases"
             />
+            {filter && (
+              <button
+                onClick={handleClearFilter}
+                className="absolute right-2 top-2.5 text-gray-500 hover:text-white focus:outline-none focus:text-white"
+                aria-label="Clear filter"
+                title="Clear filter (Esc)"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
           <div>
             <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Cases</h2>
