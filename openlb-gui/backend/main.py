@@ -59,6 +59,44 @@ class RateLimiter:
 
 rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive actions
 
+# Trusted Origins
+ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
+
+class TrustedOriginMiddleware(BaseHTTPMiddleware):
+    """
+    Sentinel Security Middleware: Enforce Strict Origin Checks
+    Prevents CSRF attacks by validating the 'Origin' or 'Referer' header
+    on state-changing requests (POST, PUT, DELETE, PATCH).
+    """
+    def __init__(self, app, allowed_origins):
+        super().__init__(app)
+        self.allowed_origins = allowed_origins
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+            origin = request.headers.get("origin")
+            referrer = request.headers.get("referer")
+
+            # 1. Check Origin (Standard Browser Behavior)
+            if origin:
+                if origin not in self.allowed_origins:
+                     logger.warning(f"Blocked CSRF attempt. Origin: {origin}")
+                     return Response("Forbidden: Untrusted Origin", status_code=403)
+
+            # 2. Check Referer (Fallback / Extra Security)
+            # Referer includes path, so we verify it starts with an allowed origin
+            elif referrer:
+                 if not any(referrer.startswith(allowed) for allowed in self.allowed_origins):
+                     logger.warning(f"Blocked CSRF attempt. Referer: {referrer}")
+                     return Response("Forbidden: Untrusted Referrer", status_code=403)
+
+            # 3. If both are missing, we ALLOW (Lax Mode)
+            # This is necessary because non-browser tools (curl, scripts, TestClient)
+            # typically do not send Origin/Referer.
+            # Since the app runs on localhost, the primary threat is the browser (CSRF).
+
+        return await call_next(request)
+
 class LimitUploadSize(BaseHTTPMiddleware):
     def __init__(self, app, max_upload_size: int) -> None:
         super().__init__(app)
@@ -83,11 +121,14 @@ class LimitUploadSize(BaseHTTPMiddleware):
 # Restrict to standard local dev ports to prevent access from arbitrary sites
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=list(ALLOWED_ORIGINS),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Apply TrustedOriginMiddleware
+app.add_middleware(TrustedOriginMiddleware, allowed_origins=ALLOWED_ORIGINS)
 
 # Security Headers Middleware
 @app.middleware("http")
