@@ -305,11 +305,17 @@ class ConfigRequest(BaseModel):
 def duplicate_case(req: DuplicateRequest):
     """Duplicates an existing case."""
     safe_source = validate_case_path(req.source_path)
-    logger.info(f"Duplicating case: {safe_source} to name: {req.new_name}")
 
     # Performance Optimization: Use pre-compiled regex
     if not VALID_NAME_PATTERN.match(req.new_name):
+        # Security Fix: Log Injection (CWE-117)
+        # We must not log req.new_name directly if it hasn't been validated yet.
+        # It could contain newlines and fake log entries.
+        logger.warning(f"Invalid duplicate attempt: name={repr(req.new_name)}")
         raise HTTPException(status_code=400, detail="Invalid name. Use alphanumeric, underscore, and hyphen only.")
+
+    # Log AFTER validation to prevent Log Injection
+    logger.info(f"Duplicating case: {safe_source} to name: {req.new_name}")
 
     parent_dir = os.path.dirname(safe_source)
     target_path = os.path.join(parent_dir, req.new_name)
