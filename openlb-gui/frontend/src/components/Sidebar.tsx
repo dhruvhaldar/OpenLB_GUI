@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo, useRef, useDeferredValue } from 'react';
+import React, { memo, useState, useMemo, useRef, useDeferredValue, useEffect } from 'react';
 import { Folder, Activity, RefreshCw, Search, X } from 'lucide-react';
 import type { Case } from '../types';
 
@@ -68,6 +68,24 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     }
   };
 
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Focus search on '/'
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Don't trigger if user is typing in an input/textarea
+        const target = e.target as HTMLElement;
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
+          return;
+        }
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
   return (
     <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
       <div className="p-4 flex items-center justify-between">
@@ -93,11 +111,11 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
       <nav className="flex-1 overflow-y-auto px-4 pb-4" aria-label="Simulation Cases">
         <div className="space-y-4">
           <div className="relative">
-            <Search className="absolute left-2 top-2.5 text-gray-500" size={14} />
+            <Search className="absolute left-2 top-2.5 text-gray-500" size={14} aria-hidden="true" />
             <input
               ref={inputRef}
               type="text"
-              placeholder="Filter cases..."
+              placeholder="Filter cases... (Press /)"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               onKeyDown={handleKeyDown}
