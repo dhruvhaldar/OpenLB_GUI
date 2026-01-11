@@ -107,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
             {filter && (
               <button
                 onClick={handleClearFilter}
-                className="absolute right-2 top-2.5 text-gray-500 hover:text-white focus:outline-none focus:text-white"
+                className="absolute right-2 top-2.5 text-gray-500 hover:text-white focus:outline-none focus:text-white rounded-full focus-visible:ring-2 focus-visible:ring-blue-500"
                 aria-label="Clear filter"
                 title="Clear filter (Esc)"
               >
@@ -144,8 +144,16 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
                   </li>
                 ))
               ) : (
-                <li className="text-gray-500 text-sm px-3 py-2 italic text-center">
-                  {cases.length === 0 ? 'No cases found' : 'No matching cases'}
+                <li className="text-gray-500 text-sm px-3 py-2 text-center flex flex-col items-center gap-2">
+                  <span className="italic">{cases.length === 0 ? 'No cases found' : 'No matching cases'}</span>
+                  {cases.length > 0 && (
+                    <button
+                      onClick={handleClearFilter}
+                      className="text-xs text-blue-400 hover:text-blue-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-2 py-1"
+                    >
+                      Clear filter
+                    </button>
+                  )}
                 </li>
               )}
             </ul>
