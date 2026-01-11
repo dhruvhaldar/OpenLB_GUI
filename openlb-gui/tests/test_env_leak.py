@@ -12,8 +12,13 @@ os.environ["SECRET_API_KEY"] = "super_secret_value"
 os.environ["OLB_CUSTOM_VAR"] = "should_be_passed"
 
 from main import build_case, run_case, CommandRequest
+from fastapi import Request
 
 class TestEnvSanitization(unittest.TestCase):
+    def setUp(self):
+        self.mock_request = MagicMock(spec=Request)
+        self.mock_request.client.host = "127.0.0.1"
+
     def test_build_case_sanitizes_env(self):
         """
         Verify that build_case sanitizes environment variables.
@@ -29,7 +34,7 @@ class TestEnvSanitization(unittest.TestCase):
                  patch("main.execution_lock", mock_lock):
 
                 req = CommandRequest(case_path="some/case")
-                build_case(req)
+                build_case(req, self.mock_request)
 
                 args, kwargs = mock_run.call_args
                 env_passed = kwargs.get("env")
@@ -54,7 +59,7 @@ class TestEnvSanitization(unittest.TestCase):
                  patch("main.execution_lock", mock_lock):
 
                 req = CommandRequest(case_path="some/case")
-                run_case(req)
+                run_case(req, self.mock_request)
 
                 args, kwargs = mock_run.call_args
                 env_passed = kwargs.get("env")
