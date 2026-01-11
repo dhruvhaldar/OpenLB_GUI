@@ -314,20 +314,22 @@ class ConfigRequest(BaseModel):
         return v
 
 @app.post("/cases/duplicate")
-def duplicate_case(req: DuplicateRequest):
+def duplicate_case(req: DuplicateRequest, request: Request):
     """Duplicates an existing case."""
     safe_source = validate_case_path(req.source_path)
+    client_ip = request.client.host if request.client else "unknown"
 
     # Performance Optimization: Use pre-compiled regex
     if not VALID_NAME_PATTERN.match(req.new_name):
         # Security Fix: Log Injection (CWE-117)
         # We must not log req.new_name directly if it hasn't been validated yet.
         # It could contain newlines and fake log entries.
-        logger.warning(f"Invalid duplicate attempt: name={repr(req.new_name)}")
+        logger.warning(f"Invalid duplicate attempt from {client_ip}: name={repr(req.new_name)}")
         raise HTTPException(status_code=400, detail="Invalid name. Use alphanumeric, underscore, and hyphen only.")
 
     # Log AFTER validation to prevent Log Injection
-    logger.info(f"Duplicating case: {safe_source} to name: {req.new_name}")
+    # Audit Log: Include client IP for accountability
+    logger.info(f"Duplicating case: {safe_source} to name: {req.new_name} (Request from: {client_ip})")
 
     parent_dir = os.path.dirname(safe_source)
     target_path = os.path.join(parent_dir, req.new_name)
@@ -354,10 +356,12 @@ def duplicate_case(req: DuplicateRequest):
         raise HTTPException(status_code=500, detail="Failed to duplicate case")
 
 @app.delete("/cases")
-def delete_case(case_path: str):
+def delete_case(case_path: str, request: Request):
     """Deletes a case directory."""
     safe_path = validate_case_path(case_path)
-    logger.info(f"Deleting case: {safe_path}")
+    client_ip = request.client.host if request.client else "unknown"
+    # Audit Log: Include client IP for accountability
+    logger.info(f"Deleting case: {safe_path} (Request from: {client_ip})")
 
     if not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail="Case not found")
@@ -448,7 +452,7 @@ def list_cases():
     return cases
 
 @app.post("/build")
-def build_case(req: CommandRequest):
+def build_case(req: CommandRequest, request: Request):
     """Executes 'make' in the directory."""
     # Enforce concurrency limit to prevent resource exhaustion
     if not execution_lock.acquire(blocking=False):
@@ -457,7 +461,9 @@ def build_case(req: CommandRequest):
     try:
         # Security check
         safe_path = validate_case_path(req.case_path)
-        logger.info(f"Building case: {safe_path}")
+        client_ip = request.client.host if request.client else "unknown"
+        # Audit Log: Include client IP for accountability
+        logger.info(f"Building case: {safe_path} (Request from: {client_ip})")
 
         if not os.path.exists(safe_path):
             logger.warning(f"Case path not found: {safe_path}")
@@ -504,7 +510,7 @@ def build_case(req: CommandRequest):
         execution_lock.release()
 
 @app.post("/run")
-def run_case(req: CommandRequest):
+def run_case(req: CommandRequest, request: Request):
     """Executes 'make run' in the directory."""
     # Enforce concurrency limit to prevent resource exhaustion
     if not execution_lock.acquire(blocking=False):
@@ -513,7 +519,9 @@ def run_case(req: CommandRequest):
     try:
         # Security check
         safe_path = validate_case_path(req.case_path)
-        logger.info(f"Running case: {safe_path}")
+        client_ip = request.client.host if request.client else "unknown"
+        # Audit Log: Include client IP for accountability
+        logger.info(f"Running case: {safe_path} (Request from: {client_ip})")
 
         if not os.path.exists(safe_path):
             logger.warning(f"Case path not found: {safe_path}")
@@ -554,11 +562,13 @@ def run_case(req: CommandRequest):
         execution_lock.release()
 
 @app.get("/config")
-def get_config(path: str):
+def get_config(path: str, request: Request):
     """Reads the config.xml file."""
     # Validate path is within CASES_DIR for security
     safe_path = validate_case_path(path)
-    logger.info(f"Reading config for: {safe_path}")
+    client_ip = request.client.host if request.client else "unknown"
+    # Audit Log: Include client IP for accountability
+    logger.info(f"Reading config for: {safe_path} (Request from: {client_ip})")
 
     config_path = os.path.join(safe_path, "config.xml")
 
@@ -589,10 +599,12 @@ def get_config(path: str):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/config")
-def save_config(req: ConfigRequest):
+def save_config(req: ConfigRequest, request: Request):
     """Writes the config.xml file."""
     safe_path = validate_case_path(req.case_path)
-    logger.info(f"Saving config for: {safe_path} (size: {len(req.content)} bytes)")
+    client_ip = request.client.host if request.client else "unknown"
+    # Audit Log: Include client IP for accountability
+    logger.info(f"Saving config for: {safe_path} (size: {len(req.content)} bytes) (Request from: {client_ip})")
 
     config_path = os.path.join(safe_path, "config.xml")
 
