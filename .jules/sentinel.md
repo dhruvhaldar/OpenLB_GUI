@@ -1,6 +1,6 @@
-## 2024-05-20 - Baseline
+# Sentinel Security Journal
 
-## 2026-01-10 - Log Injection via User Input
-**Vulnerability:** User input (`req.new_name`) was logged directly in `duplicate_case` before validation. An attacker could inject newlines to forge fake log entries (Log Injection / CWE-117).
-**Learning:** Logging user input *before* validation or without sanitization (`repr()`) is a common trap, especially in "informational" logs. Naive automated tests might confirm a vulnerability even if it's fixed (escaped) if they just grep for the payload string.
-**Prevention:** Always log user input *after* validation or wrap it in `repr()` to escape control characters. Verification scripts must check for structural injection (newlines), not just the presence of the payload string.
+## 2025-01-12 - Disk Exhaustion Protection in Subprocesses
+**Vulnerability:** The backend executed external commands (`make`, `make run`) using `subprocess.Popen` with output redirected to a temporary file (`tempfile.TemporaryFile`). There was no limit on the size of this file. A malicious or buggy simulation could write infinite data to stdout, filling the server's disk space and causing a Denial of Service (DoS).
+**Learning:** `subprocess.Popen` with `stdout=file_obj` writes directly to the file descriptor, bypassing Python-level buffering. While efficient, it lacks built-in size limits. Standard resource limits (`ulimit` / `setrlimit`) affect *all* file writes, which is unsuitable for build processes that legitimately produce large artifacts (binaries, object files) but need to limit only the log output.
+**Prevention:** Implemented a polling loop in `run_command_safe` that periodically checks `os.fstat(fd).st_size`. If the limit (10MB) is exceeded, the process group is terminated. Crucially, I added a "post-mortem" check after the process exits to catch fast-running processes that might exceed the limit between poll intervals. Additionally, improved error handling to ensure the partial log (containing the error message) is returned to the user even when the process is killed.

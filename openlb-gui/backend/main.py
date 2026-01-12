@@ -205,11 +205,11 @@ def get_safe_env():
             safe_env[key] = value
     return safe_env
 
-def run_command_safe(cmd, cwd, env, stdout, timeout):
+def run_command_safe(cmd, cwd, env, stdout, timeout, max_output_size=10 * 1024 * 1024):
     """
-    Executes a command in a new process group and kills the entire group on timeout.
+    Executes a command in a new process group and kills the entire group on timeout or output limit.
     Prevents zombie processes and resource exhaustion (DoS) when a simulation hangs
-    or spawns child processes that ignore simple kill signals.
+    or writes excessive logs (Disk Exhaustion).
     """
     # Start new session (setsid) to create a new process group
     # This allows us to target the group with killpg
@@ -222,14 +222,43 @@ def run_command_safe(cmd, cwd, env, stdout, timeout):
         start_new_session=start_new_session
     ) as process:
         try:
-            process.wait(timeout=timeout)
+            # Sentinel Fix: Monitor process and output size to prevent DoS
+            # Instead of a blocking wait(), we poll periodically.
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                # 1. Check if process finished
+                if process.poll() is not None:
+                    # Final check for output size (in case it finished very fast)
+                    if stdout and os.fstat(stdout.fileno()).st_size > max_output_size:
+                        logger.warning(f"Process output exceeded limit ({max_output_size} bytes).")
+                        stdout.write(b"\n\n[ERROR: Output limit exceeded. Terminating process to prevent disk exhaustion.]\n")
+                        raise subprocess.TimeoutExpired(cmd, timeout)
+                    return process.returncode
+
+                # 2. Check output size (Disk Exhaustion Protection)
+                if stdout:
+                    try:
+                        current_size = os.fstat(stdout.fileno()).st_size
+                        if current_size > max_output_size:
+                            logger.warning(f"Process output exceeded limit ({max_output_size} bytes). Killing.")
+                            stdout.write(b"\n\n[ERROR: Output limit exceeded. Terminating process to prevent disk exhaustion.]\n")
+                            # Trigger the cleanup logic in the except block
+                            raise subprocess.TimeoutExpired(cmd, timeout)
+                    except OSError:
+                        pass # Should not happen with valid file descriptor
+
+                time.sleep(0.5)
+
+            # If loop finishes without returning, it timed out
+            raise subprocess.TimeoutExpired(cmd, timeout)
+
         except subprocess.TimeoutExpired:
-            logger.error(f"Command timed out: {cmd}")
+            logger.error(f"Command timed out or exceeded limits: {cmd}")
             # Kill the process group to ensure all children are terminated
             if start_new_session:
                 try:
                     pgid = os.getpgid(process.pid)
-                    logger.warning(f"Killing process group {pgid} due to timeout")
+                    logger.warning(f"Killing process group {pgid}")
                     os.killpg(pgid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
@@ -240,7 +269,6 @@ def run_command_safe(cmd, cwd, env, stdout, timeout):
             # Ensure the parent process is definitely dead and cleaned up
             process.kill()
             raise # Re-raise to be caught by the caller
-        return process.returncode
 
 def validate_case_path(path_str: str) -> str:
     """
@@ -517,13 +545,23 @@ def build_case(req: CommandRequest, request: Request):
                 # Use sanitized environment to prevent secret leakage
                 # SENTINEL FIX: Use run_command_safe to kill process tree on timeout
                 # This prevents zombie processes if 'make' spawns children.
-                return_code = run_command_safe(
-                    ["make"],
-                    cwd=safe_path,
-                    env=get_safe_env(),
-                    stdout=tmp,
-                    timeout=300  # 5 minute timeout
-                )
+                try:
+                    return_code = run_command_safe(
+                        ["make"],
+                        cwd=safe_path,
+                        env=get_safe_env(),
+                        stdout=tmp,
+                        timeout=300  # 5 minute timeout
+                    )
+                except subprocess.TimeoutExpired:
+                    logger.error(f"Build timed out for {safe_path}")
+                    output = read_log_tail(tmp)
+                    return {
+                        "success": False,
+                        "error": "Build timed out (limit: 5 minutes)",
+                        "stdout": output,
+                        "stderr": ""
+                    }
 
                 # Performance Optimization: Tail Reading
                 # Instead of reading the first 512KB (which often misses the error at the end),
@@ -537,9 +575,6 @@ def build_case(req: CommandRequest, request: Request):
                     "stdout": output,
                     "stderr": "" # stderr is merged into stdout
                 }
-        except subprocess.TimeoutExpired:
-            logger.error(f"Build timed out for {safe_path}")
-            return {"success": False, "error": "Build timed out (limit: 5 minutes)"}
         except Exception as e:
             logger.error(f"Build failed: {e}")
             return {"success": False, "error": "Build failed due to an internal error"}
@@ -571,13 +606,23 @@ def run_case(req: CommandRequest, request: Request):
             with tempfile.TemporaryFile(mode='w+b') as tmp:
                 # Use sanitized environment to prevent secret leakage
                 # SENTINEL FIX: Use run_command_safe to kill process tree on timeout
-                return_code = run_command_safe(
-                    ["make", "run"],
-                    cwd=safe_path,
-                    env=get_safe_env(),
-                    stdout=tmp,
-                    timeout=600  # 10 minute timeout
-                )
+                try:
+                    return_code = run_command_safe(
+                        ["make", "run"],
+                        cwd=safe_path,
+                        env=get_safe_env(),
+                        stdout=tmp,
+                        timeout=600  # 10 minute timeout
+                    )
+                except subprocess.TimeoutExpired:
+                    logger.error(f"Run timed out for {safe_path}")
+                    output = read_log_tail(tmp)
+                    return {
+                        "success": False,
+                        "error": "Simulation timed out (limit: 10 minutes)",
+                        "stdout": output,
+                        "stderr": ""
+                    }
 
                 # Performance Optimization: Tail Reading (see build_case for details)
                 output = read_log_tail(tmp)
@@ -587,9 +632,6 @@ def run_case(req: CommandRequest, request: Request):
                     "stdout": output,
                     "stderr": "" # stderr is merged into stdout
                 }
-        except subprocess.TimeoutExpired:
-            logger.error(f"Run timed out for {safe_path}")
-            return {"success": False, "error": "Simulation timed out (limit: 10 minutes)"}
         except Exception as e:
             logger.error(f"Run failed: {e}")
             return {"success": False, "error": "Simulation failed due to an internal error"}
