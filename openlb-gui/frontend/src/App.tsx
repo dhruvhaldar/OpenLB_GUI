@@ -17,6 +17,7 @@ function App() {
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+  const [headerCopyStatus, setHeaderCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloaded'>('idle');
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -165,6 +166,17 @@ function App() {
     }
   };
 
+  const handleCopyPath = async () => {
+    if (!selectedCase) return;
+    try {
+      await navigator.clipboard.writeText(selectedCase.path);
+      setHeaderCopyStatus('copied');
+      setTimeout(() => setHeaderCopyStatus('idle'), 2000);
+    } catch (err) {
+      console.error('Failed to copy path', err);
+    }
+  };
+
   const handleClearOutput = () => {
     setOutput('');
   };
@@ -268,7 +280,19 @@ function App() {
           <>
             <header className="bg-gray-800 p-4 border-b border-gray-700 flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <h2 className="text-lg font-medium">{selectedCase.domain} / {selectedCase.name}</h2>
+                <div className="flex items-center gap-2 group">
+                  <h2 className="text-lg font-medium">{selectedCase.domain} / {selectedCase.name}</h2>
+                  <button
+                    onClick={handleCopyPath}
+                    className={`opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                      headerCopyStatus === 'copied' ? 'text-green-400' : 'text-gray-500 hover:text-white'
+                    }`}
+                    aria-label={headerCopyStatus === 'copied' ? "Copied path" : "Copy case path"}
+                    title={headerCopyStatus === 'copied' ? "Copied!" : "Copy case path"}
+                  >
+                    {headerCopyStatus === 'copied' ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+                </div>
                 <div className="flex gap-1">
                   <button
                     onClick={handleDuplicate}
