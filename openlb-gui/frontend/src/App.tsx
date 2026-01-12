@@ -17,6 +17,7 @@ function App() {
   const [output, setOutput] = useState('');
   const [status, setStatus] = useState('idle'); // idle, building, running
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+  const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloaded'>('idle');
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -176,6 +177,8 @@ function App() {
     a.download = 'output.txt';
     a.click();
     URL.revokeObjectURL(url);
+    setDownloadStatus('downloaded');
+    setTimeout(() => setDownloadStatus('idle'), 2000);
   };
 
   const handleDuplicate = async () => {
@@ -348,11 +351,13 @@ function App() {
                     </button>
                     <button
                         onClick={handleDownloadOutput}
-                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                        aria-label="Download output"
-                        title="Download output"
+                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                          downloadStatus === 'downloaded' ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
+                        }`}
+                        aria-label={downloadStatus === 'downloaded' ? "Download complete" : "Download output"}
+                        title={downloadStatus === 'downloaded' ? "Downloaded!" : "Download output"}
                     >
-                        <Download size={16} />
+                        {downloadStatus === 'downloaded' ? <Check size={16} /> : <Download size={16} />}
                     </button>
                     <button
                         onClick={handleCopyOutput}
