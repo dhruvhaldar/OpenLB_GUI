@@ -13,6 +13,7 @@ import re
 import threading
 import shutil
 import time
+import signal
 from collections import defaultdict, deque
 from pathlib import Path
 
@@ -203,6 +204,43 @@ def get_safe_env():
         if key in SAFE_ENV_VARS or key.startswith('OLB_'):
             safe_env[key] = value
     return safe_env
+
+def run_command_safe(cmd, cwd, env, stdout, timeout):
+    """
+    Executes a command in a new process group and kills the entire group on timeout.
+    Prevents zombie processes and resource exhaustion (DoS) when a simulation hangs
+    or spawns child processes that ignore simple kill signals.
+    """
+    # Start new session (setsid) to create a new process group
+    # This allows us to target the group with killpg
+    start_new_session = True if os.name != 'nt' else False
+
+    with subprocess.Popen(
+        cmd, cwd=cwd, env=env,
+        stdout=stdout, stderr=subprocess.STDOUT,
+        text=False, # Binary mode
+        start_new_session=start_new_session
+    ) as process:
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            logger.error(f"Command timed out: {cmd}")
+            # Kill the process group to ensure all children are terminated
+            if start_new_session:
+                try:
+                    pgid = os.getpgid(process.pid)
+                    logger.warning(f"Killing process group {pgid} due to timeout")
+                    os.killpg(pgid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            else:
+                # Fallback for Windows or if setsid failed
+                process.kill()
+
+            # Ensure the parent process is definitely dead and cleaned up
+            process.kill()
+            raise # Re-raise to be caught by the caller
+        return process.returncode
 
 def validate_case_path(path_str: str) -> str:
     """
@@ -477,14 +515,13 @@ def build_case(req: CommandRequest, request: Request):
             # (the end) without loading the entire file into memory or sending useless data.
             with tempfile.TemporaryFile(mode='w+b') as tmp:
                 # Use sanitized environment to prevent secret leakage
-                result = subprocess.run(
+                # SENTINEL FIX: Use run_command_safe to kill process tree on timeout
+                # This prevents zombie processes if 'make' spawns children.
+                return_code = run_command_safe(
                     ["make"],
                     cwd=safe_path,
                     env=get_safe_env(),
                     stdout=tmp,
-                    stderr=subprocess.STDOUT,
-                    text=False, # Binary output for efficient seeking
-                    check=False,
                     timeout=300  # 5 minute timeout
                 )
 
@@ -496,7 +533,7 @@ def build_case(req: CommandRequest, request: Request):
                 output = read_log_tail(tmp)
 
                 return {
-                    "success": result.returncode == 0,
+                    "success": return_code == 0,
                     "stdout": output,
                     "stderr": "" # stderr is merged into stdout
                 }
@@ -533,14 +570,12 @@ def run_case(req: CommandRequest, request: Request):
             # Performance Optimization: Use binary mode ('w+b') for efficient tail reading
             with tempfile.TemporaryFile(mode='w+b') as tmp:
                 # Use sanitized environment to prevent secret leakage
-                result = subprocess.run(
+                # SENTINEL FIX: Use run_command_safe to kill process tree on timeout
+                return_code = run_command_safe(
                     ["make", "run"],
                     cwd=safe_path,
                     env=get_safe_env(),
                     stdout=tmp,
-                    stderr=subprocess.STDOUT,
-                    text=False, # Binary output
-                    check=False,
                     timeout=600  # 10 minute timeout
                 )
 
@@ -548,7 +583,7 @@ def run_case(req: CommandRequest, request: Request):
                 output = read_log_tail(tmp)
 
                 return {
-                    "success": result.returncode == 0,
+                    "success": return_code == 0,
                     "stdout": output,
                     "stderr": "" # stderr is merged into stdout
                 }
