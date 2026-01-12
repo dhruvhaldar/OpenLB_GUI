@@ -23,8 +23,8 @@ class TestEnvSanitization(unittest.TestCase):
         """
         Verify that build_case sanitizes environment variables.
         """
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.return_code = 0
+        # Patch run_command_safe instead of subprocess.run
+        with patch("main.run_command_safe", return_value=0) as mock_run:
 
             mock_lock = MagicMock()
             mock_lock.acquire.return_value = True
@@ -38,6 +38,9 @@ class TestEnvSanitization(unittest.TestCase):
 
                 args, kwargs = mock_run.call_args
                 env_passed = kwargs.get("env")
+                # If env was passed as positional arg (it is 3rd arg in run_command_safe)
+                if not env_passed and len(args) > 2:
+                    env_passed = args[2]
 
                 self.assertIsNotNone(env_passed, "Environment should be passed explicitly")
                 self.assertNotIn("SECRET_API_KEY", env_passed, "SECRET_API_KEY should be stripped")
@@ -48,8 +51,8 @@ class TestEnvSanitization(unittest.TestCase):
         """
         Verify that run_case sanitizes environment variables.
         """
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.return_code = 0
+        # Patch run_command_safe instead of subprocess.run
+        with patch("main.run_command_safe", return_value=0) as mock_run:
 
             mock_lock = MagicMock()
             mock_lock.acquire.return_value = True
@@ -63,6 +66,9 @@ class TestEnvSanitization(unittest.TestCase):
 
                 args, kwargs = mock_run.call_args
                 env_passed = kwargs.get("env")
+                # If env was passed as positional arg (it is 3rd arg in run_command_safe)
+                if not env_passed and len(args) > 2:
+                    env_passed = args[2]
 
                 self.assertIsNotNone(env_passed, "Environment should be passed explicitly")
                 self.assertNotIn("SECRET_API_KEY", env_passed, "SECRET_API_KEY should be stripped")
