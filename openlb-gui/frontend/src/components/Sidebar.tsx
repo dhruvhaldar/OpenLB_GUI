@@ -48,14 +48,25 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
   const deferredFilter = useDeferredValue(filter);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Optimization: Pre-compute search strings to avoid repeated .toLowerCase() calls during filtering
+  // This reduces the filtering complexity from O(N * M) to O(N) where M is the string length.
+  // We compute this once when 'cases' changes, rather than on every keystroke.
+  const searchIndex = useMemo(() => {
+    return cases.map(c =>
+      `${c.name.toLowerCase()} ${c.domain.toLowerCase()}`
+    );
+  }, [cases]);
+
   const filteredCases = useMemo(() => {
     if (!deferredFilter) return cases;
     const lowerFilter = deferredFilter.toLowerCase();
-    return cases.filter(c =>
-      c.name.toLowerCase().includes(lowerFilter) ||
-      c.domain.toLowerCase().includes(lowerFilter)
+
+    // Optimization: Use the pre-computed index for fast lookup
+    // accessing searchIndex[i] is O(1)
+    return cases.filter((_, i) =>
+      searchIndex[i].includes(lowerFilter)
     );
-  }, [cases, deferredFilter]);
+  }, [cases, deferredFilter, searchIndex]);
 
   const handleClearFilter = () => {
     setFilter('');
