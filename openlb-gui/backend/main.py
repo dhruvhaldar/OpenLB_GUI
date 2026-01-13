@@ -247,7 +247,11 @@ def run_command_safe(cmd, cwd, env, stdout, timeout, max_output_size=10 * 1024 *
                     except OSError:
                         pass # Should not happen with valid file descriptor
 
-                time.sleep(0.5)
+                # Performance Optimization: Reduced polling interval from 0.5s to 0.1s.
+                # This improves responsiveness for short-lived commands (like fast builds or immediate failures)
+                # by reducing the latency penalty from ~500ms to ~100ms.
+                # The overhead of checking poll() and fstat() 10x/sec is negligible compared to the UX gain.
+                time.sleep(0.1)
 
             # If loop finishes without returning, it timed out
             raise subprocess.TimeoutExpired(cmd, timeout)
