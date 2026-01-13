@@ -26,7 +26,7 @@ def setup_test_case():
 def test_atomic_save_config(setup_test_case):
     case_name = setup_test_case
     payload = {
-        "case_path": f"my_cases/{case_name}",
+        "case_path": case_name,
         "content": "<xml>Atomic Content</xml>"
     }
 
