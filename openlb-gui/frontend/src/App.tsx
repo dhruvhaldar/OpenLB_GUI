@@ -345,18 +345,13 @@ function App() {
             </header>
 
             <div className="flex-1 flex overflow-hidden">
-              {config !== null ? (
-                <ConfigEditor
-                  key={selectedCase.id}
-                  initialContent={config}
-                  onSave={handleSaveConfig}
-                  className="w-1/2 p-4 border-r border-gray-700"
-                />
-              ) : (
-                <div className="w-1/2 p-4 border-r border-gray-700 flex items-center justify-center text-gray-500">
-                  <Loader2 className="animate-spin mr-2" /> Loading config...
-                </div>
-              )}
+              <ConfigEditor
+                key={selectedCase.id}
+                initialContent={config || ''}
+                isLoading={config === null}
+                onSave={handleSaveConfig}
+                className="w-1/2 p-4 border-r border-gray-700"
+              />
 
               {/* Output Terminal */}
               <div className="w-1/2 p-4 flex flex-col bg-black">
