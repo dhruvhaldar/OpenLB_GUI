@@ -290,6 +290,11 @@ def validate_case_path(path_str: str) -> str:
             logger.warning(f"Invalid characters in path: {repr(path_str)}")
             raise HTTPException(status_code=400, detail="Invalid characters in path")
 
+        # Sentinel Enhancement: Support relative paths to avoid exposing server directory structure.
+        # If path is relative, anchor it to CASES_DIR.
+        if not os.path.isabs(path_str):
+            path_str = os.path.join(CASES_DIR, path_str)
+
         # Performance Optimization: Use os.path + regex instead of Pathlib
         # Pathlib's resolve() and relative_to() involve object overhead and iterative checks.
         # os.path.realpath + relpath + regex provides a ~5x speedup for this hot path.
@@ -420,7 +425,7 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         # as the actual file content, leading to arbitrary file read / disclosure.
         # It also prevents infinite recursion if a symlink points to a parent directory.
         shutil.copytree(safe_source, target_path, symlinks=True)
-        return {"success": True, "new_path": target_path}
+        return {"success": True, "new_path": os.path.relpath(target_path, CASES_DIR)}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to duplicate case")
@@ -477,7 +482,7 @@ def list_cases():
                     rel_path = entry1.name
                     cases.append({
                         "id": rel_path,
-                        "path": entry1.path,
+                        "path": rel_path,
                         "name": entry1.name,
                         "domain": "Uncategorized"
                     })
@@ -511,7 +516,7 @@ def list_cases():
                                 rel_path = os.path.join(entry1.name, entry2.name)
                                 cases.append({
                                     "id": rel_path,
-                                    "path": entry2.path,
+                                    "path": rel_path,
                                     "name": entry2.name,
                                     "domain": entry1.name
                                 })
