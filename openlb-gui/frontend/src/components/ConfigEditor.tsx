@@ -5,14 +5,28 @@ interface ConfigEditorProps {
   initialContent: string;
   onSave: (content: string) => Promise<void>;
   className?: string;
+  isLoading?: boolean;
 }
 
-const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className }) => {
+const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, className, isLoading = false }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSavedContent = useRef(initialContent);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isDirty, setIsDirty] = useState(false);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+
+  useEffect(() => {
+    // When content finishes loading, sync the dirty tracking baseline
+    if (!isLoading) {
+      lastSavedContent.current = initialContent;
+      // If the textarea is mounted (which it should be if !isLoading),
+      // we don't need to force update it because defaultValue handles the mount.
+      // But if we transition from !isLoading -> !isLoading (prop update),
+      // we might need to sync. However, this component is designed
+      // to rely on key-based remounting or manual resets.
+      // For the specific case of Loading -> Loaded, this sync is sufficient.
+    }
+  }, [initialContent, isLoading]);
 
   useEffect(() => {
     if (saveStatus === 'saved') {
@@ -61,11 +75,14 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
-      handleSave();
+      if (!isLoading) {
+        handleSave();
+      }
     }
   };
 
   const getButtonTitle = () => {
+    if (isLoading) return 'Loading...';
     switch (saveStatus) {
       case 'saving': return 'Saving...';
       case 'saved': return 'Configuration Saved';
@@ -83,7 +100,8 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
         <div className="flex gap-2">
           <button
             onClick={handleCopy}
-            className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+            disabled={isLoading}
+            className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 ${
               copyStatus === 'copied' ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
             }`}
             aria-label={copyStatus === 'copied' ? "Copied configuration" : "Copy configuration"}
@@ -93,42 +111,48 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
           </button>
           <button
             onClick={handleSave}
-          disabled={saveStatus === 'saving'}
-          title={getButtonTitle()}
-          aria-keyshortcuts="Control+S"
-          aria-live="polite"
-          className={`text-sm flex items-center gap-2 px-3 py-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
-            saveStatus === 'saved'
-              ? 'text-green-400 hover:text-green-300'
-              : saveStatus === 'error'
-              ? 'text-red-400 hover:text-red-300'
-              : isDirty
-              ? 'text-amber-400 hover:text-amber-300 bg-gray-800'
-              : 'text-blue-400 hover:text-blue-300 hover:bg-gray-800'
-          }`}
-        >
-          {saveStatus === 'saving' ? (
-            <Loader2 className="animate-spin" size={14} />
-          ) : saveStatus === 'saved' ? (
-            <Check size={14} />
-          ) : (
-            <Save size={14} />
-          )}
-          {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Failed' : isDirty ? 'Save*' : 'Save'}
-        </button>
+            disabled={saveStatus === 'saving' || isLoading}
+            title={getButtonTitle()}
+            aria-keyshortcuts="Control+S"
+            aria-live="polite"
+            className={`text-sm flex items-center gap-2 px-3 py-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 ${
+              saveStatus === 'saved'
+                ? 'text-green-400 hover:text-green-300'
+                : saveStatus === 'error'
+                ? 'text-red-400 hover:text-red-300'
+                : isDirty
+                ? 'text-amber-400 hover:text-amber-300 bg-gray-800'
+                : 'text-blue-400 hover:text-blue-300 hover:bg-gray-800'
+            }`}
+          >
+            {saveStatus === 'saving' ? (
+              <Loader2 className="animate-spin" size={14} />
+            ) : saveStatus === 'saved' ? (
+              <Check size={14} />
+            ) : (
+              <Save size={14} />
+            )}
+            {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Failed' : isDirty ? 'Save*' : 'Save'}
+          </button>
         </div>
       </div>
-      <textarea
-        ref={textareaRef}
-        aria-labelledby="config-editor-title"
-        defaultValue={initialContent}
-        onKeyDown={handleKeyDown}
-        onChange={handleChange}
-        spellCheck={false}
-        autoCorrect="off"
-        autoCapitalize="off"
-        className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-      />
+      {isLoading ? (
+        <div className="flex-1 bg-gray-950 text-gray-500 p-4 rounded font-mono text-sm flex items-center justify-center border border-gray-800">
+          <Loader2 className="animate-spin mr-2" /> Loading config...
+        </div>
+      ) : (
+        <textarea
+          ref={textareaRef}
+          aria-labelledby="config-editor-title"
+          defaultValue={initialContent}
+          onKeyDown={handleKeyDown}
+          onChange={handleChange}
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
+          className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      )}
     </div>
   );
 };
