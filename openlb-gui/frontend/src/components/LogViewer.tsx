@@ -93,12 +93,18 @@ const LogViewer: React.FC<LogViewerProps> = ({ output }) => {
           <p className="text-xs mt-1 text-gray-400/75">Run a simulation to view logs.</p>
         </div>
       )}
-      {showScrollButton && output && (
+      {output && (
         <button
           onClick={scrollToBottom}
           aria-label="Scroll to bottom"
           title="Scroll to bottom"
-          className="absolute bottom-4 right-4 p-2 bg-gray-700/80 text-white rounded-full shadow-lg hover:bg-gray-600 backdrop-blur-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 animate-in fade-in slide-in-from-bottom-2"
+          aria-hidden={!showScrollButton}
+          tabIndex={showScrollButton ? 0 : -1}
+          className={`absolute bottom-4 right-4 p-2 bg-gray-700/80 text-white rounded-full shadow-lg hover:bg-gray-600 backdrop-blur-sm transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            showScrollButton
+              ? 'opacity-100 translate-y-0 pointer-events-auto'
+              : 'opacity-0 translate-y-2 pointer-events-none'
+          }`}
         >
           <ArrowDown size={20} />
         </button>
