@@ -14,6 +14,10 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
   const [isDirty, setIsDirty] = useState(false);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
+  // Optimization: Debounce dirty check to prevent heavy string allocation/comparison on every keystroke
+  // Accessing textareaRef.current.value creates a new string (potentially large).
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (saveStatus === 'saved') {
       const timer = setTimeout(() => setSaveStatus('idle'), 2000);
@@ -28,6 +32,13 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     }
   }, [copyStatus]);
 
+  // Optimization: Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+    }
+  }, []);
+
   const handleCopy = async () => {
     try {
       const currentContent = textareaRef.current?.value || '';
@@ -40,6 +51,9 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
 
   const handleSave = async () => {
     setSaveStatus('saving');
+    // Clear any pending dirty checks as we are about to save
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
     try {
       // Optimization: Read directly from ref to avoid re-renders on every keystroke
       const currentContent = textareaRef.current?.value || '';
@@ -53,9 +67,18 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
   };
 
   const handleChange = () => {
-    if (textareaRef.current) {
-      setIsDirty(textareaRef.current.value !== lastSavedContent.current);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
     }
+
+    // Optimization: Debounce the dirty check by 300ms.
+    // This avoids accessing .value (which allocates a new string) and comparing it
+    // on every single keystroke, significantly reducing GC pressure for large config files.
+    debounceRef.current = setTimeout(() => {
+        if (textareaRef.current) {
+             setIsDirty(textareaRef.current.value !== lastSavedContent.current);
+        }
+    }, 300);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
