@@ -110,7 +110,7 @@ function App() {
     }
   }, [selectedCase]);
 
-  const handleBuild = async () => {
+  const handleBuild = useCallback(async () => {
     if (!selectedCase) return;
     setStatus('building');
     setOutput('Building...\n');
@@ -131,9 +131,9 @@ function App() {
       setOutput(prev => appendLog(prev, '\nError connecting to server.\n'));
     }
     setStatus('idle');
-  };
+  }, [selectedCase, appendLog]);
 
-  const handleRun = async () => {
+  const handleRun = useCallback(async () => {
     if (!selectedCase) return;
     setStatus('running');
     setOutput(prev => prev + '\nRunning...\n');
@@ -154,7 +154,29 @@ function App() {
       setOutput(prev => appendLog(prev, '\nError connecting to server.\n'));
     }
     setStatus('idle');
-  };
+  }, [selectedCase, appendLog]);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Build: Ctrl+B
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        if (selectedCase && status === 'idle') {
+          handleBuild();
+        }
+      }
+      // Run: Ctrl+Enter
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedCase && status === 'idle') {
+          handleRun();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [selectedCase, status, handleBuild, handleRun]);
 
   const handleCopyOutput = async () => {
     try {
@@ -318,7 +340,7 @@ function App() {
                 <button
                   onClick={handleBuild}
                   disabled={status !== 'idle'}
-                  title={status === 'building' ? 'Building simulation...' : status === 'running' ? 'Cannot build while simulation is running' : 'Build simulation'}
+                  title={status === 'building' ? 'Building simulation...' : status === 'running' ? 'Cannot build while simulation is running' : 'Build simulation (Ctrl+B)'}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                 >
                   {status === 'building' ? (
@@ -331,7 +353,7 @@ function App() {
                 <button
                   onClick={handleRun}
                   disabled={status !== 'idle'}
-                  title={status === 'running' ? 'Running simulation...' : status === 'building' ? 'Cannot run while simulation is building' : 'Run simulation'}
+                  title={status === 'running' ? 'Running simulation...' : status === 'building' ? 'Cannot run while simulation is building' : 'Run simulation (Ctrl+Enter)'}
                   className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                 >
                   {status === 'running' ? (
