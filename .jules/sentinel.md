@@ -9,3 +9,8 @@
 **Vulnerability:** The `list_cases` endpoint returned absolute file system paths (e.g., `/home/user/app/my_cases/Case1`) to the frontend. This exposed the server's directory structure, username, and installation path, which helps attackers map the system (Information Disclosure).
 **Learning:** Returning absolute paths is often unnecessary and risky. Backend APIs should abstract the underlying filesystem. However, legacy endpoints or internal logic might rely on absolute paths (like `validate_case_path` utilizing `os.path.realpath`). Changing to relative paths required ensuring the validation logic could transparently handle both absolute (for internal backward compatibility) and relative paths.
 **Prevention:** Modified the API to return paths relative to a defined root (`CASES_DIR`). Updated the input validation (`validate_case_path`) to automatically anchor incoming relative paths to this root before verification. This minimizes information leakage while maintaining functionality.
+
+## 2026-01-14 - Input Validation Length Limits
+**Vulnerability:** GET and DELETE endpoints (`/config`, `/cases`) accepted unbounded string inputs for file paths via query parameters.
+**Learning:** While POST requests were protected by Pydantic models (enforcing `max_length`), query parameters in GET/DELETE requests bypassed these checks. This inconsistency allowed attackers to send arbitrarily large strings, potentially causing Denial of Service (DoS) by exhausting memory or CPU during regex validation and filesystem operations.
+**Prevention:** Explicitly applied `Query(..., max_length=4096)` to all unbounded string parameters in FastAPI endpoints, ensuring consistent input validation across all HTTP methods.

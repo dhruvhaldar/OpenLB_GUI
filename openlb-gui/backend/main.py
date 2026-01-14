@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Query
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -431,7 +431,7 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         raise HTTPException(status_code=500, detail="Failed to duplicate case")
 
 @app.delete("/cases")
-def delete_case(case_path: str, request: Request):
+def delete_case(request: Request, case_path: str = Query(..., max_length=4096)):
     """Deletes a case directory."""
     safe_path = validate_case_path(case_path)
     client_ip = request.client.host if request.client else "unknown"
@@ -648,7 +648,7 @@ def run_case(req: CommandRequest, request: Request):
         execution_lock.release()
 
 @app.get("/config")
-def get_config(path: str, request: Request):
+def get_config(request: Request, path: str = Query(..., max_length=4096)):
     """Reads the config.xml file."""
     # Validate path is within CASES_DIR for security
     safe_path = validate_case_path(path)
