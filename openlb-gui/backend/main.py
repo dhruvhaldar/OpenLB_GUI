@@ -17,6 +17,7 @@ import time
 import signal
 from collections import defaultdict, deque
 from pathlib import Path
+from functools import lru_cache
 
 # Configure logging
 logging.basicConfig(
@@ -208,17 +209,27 @@ SAFE_ENV_VARS = {
     'HOME', 'USER', 'SHELL', 'TMPDIR'
 }
 
-def get_safe_env():
+@lru_cache(maxsize=1)
+def _get_base_safe_env():
     """
-    Returns a sanitized environment dictionary for subprocess execution.
-    Only allows specific safe variables and those starting with OLB_.
-    Prevents leakage of sensitive backend environment variables (keys, secrets).
+    Internal cached helper to filter environment variables.
     """
     safe_env = {}
     for key, value in os.environ.items():
         if key in SAFE_ENV_VARS or key.startswith('OLB_'):
             safe_env[key] = value
     return safe_env
+
+def get_safe_env():
+    """
+    Returns a sanitized environment dictionary for subprocess execution.
+    Only allows specific safe variables and those starting with OLB_.
+    Prevents leakage of sensitive backend environment variables (keys, secrets).
+
+    Performance Optimization: Uses a cached base dictionary and returns a shallow copy.
+    This avoids iterating over os.environ on every call while preventing state leakage.
+    """
+    return _get_base_safe_env().copy()
 
 def run_command_safe(cmd, cwd, env, stdout, timeout, max_output_size=10 * 1024 * 1024):
     """
