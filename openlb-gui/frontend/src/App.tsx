@@ -23,7 +23,9 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Optimization: Cache config content to avoid unnecessary network requests
-  const configCache = useRef<Record<string, string>>({});
+  // Use a Map to implement LRU (Least Recently Used) eviction policy.
+  // Limit to 20 items to prevent memory bloat from large config files.
+  const configCache = useRef<Map<string, string>>(new Map());
 
   // Optimization: Helper to append logs and enforce size limit
   // Optimized to avoid allocating intermediate string larger than MAX_LOG_LENGTH
@@ -65,18 +67,28 @@ function App() {
 
 
   const fetchConfig = useCallback(async (casePath: string) => {
-    // Optimization: Check cache first
-    if (configCache.current[casePath]) {
-      setConfig(configCache.current[casePath]);
+    // Optimization: Check cache first (LRU)
+    if (configCache.current.has(casePath)) {
+      const content = configCache.current.get(casePath)!;
+      // LRU: Refresh entry by re-inserting
+      configCache.current.delete(casePath);
+      configCache.current.set(casePath, content);
+      setConfig(content);
       return;
     }
 
     try {
       const res = await fetch(`${API_URL}/config?path=${encodeURIComponent(casePath)}`);
       const data = await res.json();
-      setConfig(data.content);
-      // Optimization: Update cache
-      configCache.current[casePath] = data.content;
+      const content = data.content;
+      setConfig(content);
+
+      // Optimization: Update cache with LRU eviction
+      if (configCache.current.size >= 20) {
+        const firstKey = configCache.current.keys().next().value;
+        if (firstKey) configCache.current.delete(firstKey);
+      }
+      configCache.current.set(casePath, content);
     } catch (e) {
       console.error('Failed to fetch config', e);
     }
@@ -86,7 +98,7 @@ function App() {
     setSelectedCase(c);
     // Optimization: If cached, we don't need to reset to null and flash loader
     // fetchConfig will handle setting the state.
-    if (!configCache.current[c.path]) {
+    if (!configCache.current.has(c.path)) {
       setConfig(null); // Reset config to trigger loading state only if not cached
     }
     fetchConfig(c.path);
@@ -102,8 +114,16 @@ function App() {
         body: JSON.stringify({ case_path: selectedCase.path, content })
       });
       if (!res.ok) throw new Error('Failed to save');
+
       // Optimization: Update cache on save
-      configCache.current[selectedCase.path] = content;
+      // LRU: Refresh/Update
+      if (configCache.current.has(selectedCase.path)) {
+        configCache.current.delete(selectedCase.path);
+      } else if (configCache.current.size >= 20) {
+        const firstKey = configCache.current.keys().next().value;
+        if (firstKey) configCache.current.delete(firstKey);
+      }
+      configCache.current.set(selectedCase.path, content);
     } catch (e) {
       console.error('Failed to save config', e);
       throw e;
