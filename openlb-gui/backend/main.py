@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Body, Query
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator, Field
@@ -62,6 +63,11 @@ rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive
 
 # Trusted Origins
 ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
+
+# Trusted Hosts
+# Security Fix: Prevent DNS Rebinding attacks by enforcing Host header validation.
+# We include 'testserver' to support TestClient default behavior.
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
 
 class TrustedOriginMiddleware(BaseHTTPMiddleware):
     """
@@ -130,6 +136,10 @@ app.add_middleware(
 
 # Apply TrustedOriginMiddleware
 app.add_middleware(TrustedOriginMiddleware, allowed_origins=ALLOWED_ORIGINS)
+
+# Apply TrustedHostMiddleware
+# This blocks requests where the Host header doesn't match ALLOWED_HOSTS
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
 # Security Headers Middleware
 @app.middleware("http")
