@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus, Eraser } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus, Eraser, WrapText } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import LogViewer from './components/LogViewer';
@@ -19,6 +19,7 @@ function App() {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [headerCopyStatus, setHeaderCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloaded'>('idle');
+  const [isLogWrapped, setIsLogWrapped] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -401,6 +402,17 @@ function App() {
                   </h3>
                   <div className="flex gap-2">
                     <button
+                        onClick={() => setIsLogWrapped(!isLogWrapped)}
+                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                            isLogWrapped ? 'text-blue-400 hover:text-blue-300 bg-gray-800' : 'text-gray-400 hover:text-white'
+                        }`}
+                        aria-label={isLogWrapped ? "Disable word wrap" : "Enable word wrap"}
+                        aria-pressed={isLogWrapped}
+                        title={isLogWrapped ? "Disable word wrap" : "Enable word wrap"}
+                    >
+                        <WrapText size={16} />
+                    </button>
+                    <button
                         onClick={handleClearOutput}
                         className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                         aria-label="Clear output"
@@ -430,7 +442,7 @@ function App() {
                     </button>
                   </div>
                 </div>
-                <LogViewer output={output} />
+                <LogViewer output={output} isWrapped={isLogWrapped} />
               </div>
             </div>
           </>
