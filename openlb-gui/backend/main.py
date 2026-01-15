@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Body, Query
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator, Field
@@ -126,6 +127,17 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Security Enhancement: Host Header Validation
+# Prevents DNS Rebinding attacks where an attacker controls a domain that resolves to 127.0.0.1.
+# We whitelist standard localhost names and 'testserver' for internal testing.
+# This middleware must be added AFTER CORSMiddleware (in execution order, which means BEFORE in add_middleware order)
+# Wait, FastAPI middleware order is LIFO (Last Added = First Executed).
+# We want Host validation to happen EARLY, so we add it LAST (executed FIRST).
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["localhost", "127.0.0.1", "testserver"]
 )
 
 # Apply TrustedOriginMiddleware
