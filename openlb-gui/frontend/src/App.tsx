@@ -3,6 +3,7 @@ import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Dow
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import LogViewer from './components/LogViewer';
+import { Modal } from './components/Modal';
 import type { Case } from './types';
 
 const API_URL = 'http://localhost:8080';
@@ -22,6 +23,20 @@ function App() {
   const [isLogWrapped, setIsLogWrapped] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [duplicateName, setDuplicateName] = useState('');
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const duplicateInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isDuplicateModalOpen) {
+      // Small timeout to allow dialog to open and settle
+      setTimeout(() => {
+        duplicateInputRef.current?.focus();
+        duplicateInputRef.current?.select();
+      }, 50);
+    }
+  }, [isDuplicateModalOpen]);
 
   // Optimization: Cache config content to avoid unnecessary network requests
   // Use a Map to implement LRU (Least Recently Used) eviction policy.
@@ -234,21 +249,28 @@ function App() {
     setTimeout(() => setDownloadStatus('idle'), 2000);
   };
 
-  const handleDuplicate = async () => {
+  const handleDuplicate = () => {
     if (!selectedCase) return;
-    const newName = window.prompt('Enter new name for the case (alphanumeric, -, _):');
-    if (!newName) return;
+    setDuplicateName(`${selectedCase.name}_copy`);
+    setDuplicateError(null);
+    setIsDuplicateModalOpen(true);
+  };
+
+  const handleDuplicateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCase || !duplicateName) return;
 
     setIsDuplicating(true);
+    setDuplicateError(null);
     try {
       const res = await fetch(`${API_URL}/cases/duplicate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_path: selectedCase.path, new_name: newName })
+        body: JSON.stringify({ source_path: selectedCase.path, new_name: duplicateName })
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to duplicate: ${err.detail}`);
+        setDuplicateError(err.detail || 'Failed to duplicate');
         return;
       }
       const data = await res.json();
@@ -262,9 +284,10 @@ function App() {
       if (newCase) {
         handleSelectCase(newCase);
       }
+      setIsDuplicateModalOpen(false);
     } catch (e) {
       console.error('Duplicate failed', e);
-      alert('Failed to duplicate case');
+      setDuplicateError('Failed to duplicate case');
     } finally {
       setIsDuplicating(false);
     }
@@ -458,6 +481,49 @@ function App() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={isDuplicateModalOpen}
+        onClose={() => setIsDuplicateModalOpen(false)}
+        title="Duplicate Case"
+      >
+        <form onSubmit={handleDuplicateSubmit}>
+          <div className="mb-4">
+            <label htmlFor="caseName" className="block text-sm font-medium mb-2 text-gray-300">
+              New Case Name
+            </label>
+            <input
+              ref={duplicateInputRef}
+              id="caseName"
+              type="text"
+              value={duplicateName}
+              onChange={(e) => setDuplicateName(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-600"
+              placeholder="e.g. cylinder-flow-v2"
+            />
+            {duplicateError && (
+              <p className="mt-2 text-sm text-red-400">{duplicateError}</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsDuplicateModalOpen(false)}
+              className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!duplicateName.trim() || isDuplicating}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+            >
+              {isDuplicating && <Loader2 className="animate-spin" size={16} />}
+              Duplicate
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
