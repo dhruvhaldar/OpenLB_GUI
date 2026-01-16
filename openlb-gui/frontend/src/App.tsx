@@ -3,7 +3,8 @@ import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Dow
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import LogViewer from './components/LogViewer';
-import { Modal } from './components/Modal';
+import DuplicateCaseModal from './components/DuplicateCaseModal';
+import DeleteCaseModal from './components/DeleteCaseModal';
 import type { Case } from './types';
 
 const API_URL = 'http://localhost:8080';
@@ -27,17 +28,6 @@ function App() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [duplicateName, setDuplicateName] = useState('');
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
-  const duplicateInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isDuplicateModalOpen) {
-      // Small timeout to allow dialog to open and settle
-      setTimeout(() => {
-        duplicateInputRef.current?.focus();
-        duplicateInputRef.current?.select();
-      }, 50);
-    }
-  }, [isDuplicateModalOpen]);
 
   // Optimization: Cache config content to avoid unnecessary network requests
   // Use a Map to implement LRU (Least Recently Used) eviction policy.
@@ -257,7 +247,7 @@ function App() {
     setIsDuplicateModalOpen(true);
   };
 
-  const handleDuplicateSubmit = async (e: React.FormEvent) => {
+  const handleDuplicateSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCase || !duplicateName) return;
 
@@ -292,14 +282,14 @@ function App() {
     } finally {
       setIsDuplicating(false);
     }
-  };
+  }, [selectedCase, duplicateName, handleSelectCase]);
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = useCallback(() => {
     if (!selectedCase) return;
     setIsDeleteModalOpen(true);
-  };
+  }, [selectedCase]);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     if (!selectedCase) return;
 
     setIsDeleting(true);
@@ -326,7 +316,15 @@ function App() {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [selectedCase]);
+
+  const handleCloseDuplicate = useCallback(() => {
+    setIsDuplicateModalOpen(false);
+  }, []);
+
+  const handleCloseDelete = useCallback(() => {
+    setIsDeleteModalOpen(false);
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-900 text-white font-sans">
@@ -488,81 +486,23 @@ function App() {
         )}
       </div>
 
-      <Modal
+      <DuplicateCaseModal
         isOpen={isDuplicateModalOpen}
-        onClose={() => setIsDuplicateModalOpen(false)}
-        title="Duplicate Case"
-      >
-        <form onSubmit={handleDuplicateSubmit}>
-          <div className="mb-4">
-            <label htmlFor="caseName" className="block text-sm font-medium mb-2 text-gray-300">
-              New Case Name
-            </label>
-            <input
-              ref={duplicateInputRef}
-              id="caseName"
-              type="text"
-              value={duplicateName}
-              onChange={(e) => setDuplicateName(e.target.value)}
-              className={`w-full bg-gray-900 border rounded px-3 py-2 text-white focus:outline-none placeholder-gray-600 transition-colors ${
-                duplicateError
-                  ? 'border-red-500 focus:ring-2 focus:ring-red-500'
-                  : 'border-gray-600 focus:ring-2 focus:ring-blue-500'
-              }`}
-              placeholder="e.g. cylinder-flow-v2"
-              aria-invalid={!!duplicateError}
-              aria-describedby={duplicateError ? "duplicate-error-msg" : undefined}
-            />
-            {duplicateError && (
-              <p id="duplicate-error-msg" className="mt-2 text-sm text-red-400">{duplicateError}</p>
-            )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setIsDuplicateModalOpen(false)}
-              className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!duplicateName.trim() || isDuplicating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-            >
-              {isDuplicating && <Loader2 className="animate-spin" size={16} />}
-              Duplicate
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onClose={handleCloseDuplicate}
+        duplicateName={duplicateName}
+        onNameChange={setDuplicateName}
+        onSubmit={handleDuplicateSubmit}
+        isDuplicating={isDuplicating}
+        error={duplicateError}
+      />
 
-      <Modal
+      <DeleteCaseModal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete Case"
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-gray-300">
-            Are you sure you want to delete <span className="font-semibold text-white">{selectedCase?.name}</span>? This action cannot be undone.
-          </p>
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => setIsDeleteModalOpen(false)}
-              className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none flex items-center gap-2"
-            >
-              {isDeleting && <Loader2 className="animate-spin" size={16} />}
-              Delete
-            </button>
-          </div>
-        </div>
-      </Modal>
+        onClose={handleCloseDelete}
+        caseName={selectedCase?.name}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }
