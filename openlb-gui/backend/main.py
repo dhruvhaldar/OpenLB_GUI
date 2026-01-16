@@ -203,6 +203,16 @@ XXE_DOCTYPE_PATTERN = re.compile(r'<!\s*DOCTYPE', re.IGNORECASE)
 XXE_ENTITY_PATTERN = re.compile(r'<!\s*ENTITY', re.IGNORECASE)
 VALID_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
 
+# Security Enhancement: Windows Reserved Filenames
+# These names are reserved by Windows and can cause issues if created on a shared filesystem
+# or if the project is later moved to a Windows machine (DoS / Access Denied).
+# We block them case-insensitively.
+RESERVED_WINDOWS_NAMES = {
+    "CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+}
+
 # Allowed environment variables to pass to subprocesses
 SAFE_ENV_VARS = {
     'PATH', 'LANG', 'LC_ALL', 'TERM', 'LD_LIBRARY_PATH',
@@ -428,6 +438,11 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         # It could contain newlines and fake log entries.
         logger.warning(f"Invalid duplicate attempt from {client_ip}: name={repr(req.new_name)}")
         raise HTTPException(status_code=400, detail="Invalid name. Use alphanumeric, underscore, and hyphen only.")
+
+    # Security Enhancement: Prevent creation of Windows reserved filenames
+    if req.new_name.upper() in RESERVED_WINDOWS_NAMES:
+        logger.warning(f"Invalid duplicate attempt from {client_ip}: Reserved name={repr(req.new_name)}")
+        raise HTTPException(status_code=400, detail="Invalid name. This name is reserved by Windows.")
 
     # Log AFTER validation to prevent Log Injection
     # Audit Log: Include client IP for accountability
