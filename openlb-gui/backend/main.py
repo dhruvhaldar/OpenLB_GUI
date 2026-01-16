@@ -447,11 +447,26 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         raise HTTPException(status_code=409, detail="Case with this name already exists")
 
     try:
+        # Performance Optimization: explicit ignore patterns
+        # We define them here to avoid creating the ignore function on module load if not needed,
+        # though defining it globally is also fine.
+        ignore_func = shutil.ignore_patterns(
+            "*.o", "*.obj", "*.a", "*.so", "*.dll", "*.exe",  # Build artifacts
+            "*.vtk", "*.vti", "*.vtu", "*.vtp", "*.pvti", "*.pvtu", # Simulation outputs (can be GBs)
+            "*.log", "*.out", "*.err",               # Logs from previous runs
+            "tmp", "__pycache__", ".git", ".DS_Store" # Temporary/System files
+        )
+
         # Security Fix: Use symlinks=True to prevent dereferencing symlinks.
         # If symlinks=False (default), a symlink to /etc/passwd in the source would be copied
         # as the actual file content, leading to arbitrary file read / disclosure.
         # It also prevents infinite recursion if a symlink points to a parent directory.
-        shutil.copytree(safe_source, target_path, symlinks=True)
+        #
+        # Performance Optimization: Added ignore=ignore_func
+        # This prevents copying massive simulation output files (VTK) and build artifacts (objects),
+        # transforming an O(GB) operation into O(KB), making duplication nearly instantaneous
+        # and saving significant disk space.
+        shutil.copytree(safe_source, target_path, symlinks=True, ignore=ignore_func)
         return {"success": True, "new_path": os.path.relpath(target_path, CASES_DIR)}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
