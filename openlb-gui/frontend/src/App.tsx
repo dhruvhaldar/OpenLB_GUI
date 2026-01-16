@@ -24,6 +24,7 @@ function App() {
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [duplicateName, setDuplicateName] = useState('');
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const duplicateInputRef = useRef<HTMLInputElement>(null);
@@ -293,9 +294,13 @@ function App() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
     if (!selectedCase) return;
-    if (!window.confirm(`Are you sure you want to delete "${selectedCase.name}"? This action cannot be undone.`)) return;
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedCase) return;
 
     setIsDeleting(true);
     try {
@@ -314,6 +319,7 @@ function App() {
       setSelectedCase(null);
       setConfig(null);
       setOutput('');
+      setIsDeleteModalOpen(false);
     } catch (e) {
       console.error('Delete failed', e);
       alert('Failed to delete case');
@@ -368,7 +374,7 @@ function App() {
                     {isDuplicating ? <Loader2 size={18} className="animate-spin" /> : <CopyPlus size={18} />}
                   </button>
                   <button
-                    onClick={handleDelete}
+                    onClick={handleDeleteClick}
                     disabled={isDeleting}
                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50"
                     title={isDeleting ? "Deleting..." : "Delete Case"}
@@ -498,11 +504,17 @@ function App() {
               type="text"
               value={duplicateName}
               onChange={(e) => setDuplicateName(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-600"
+              className={`w-full bg-gray-900 border rounded px-3 py-2 text-white focus:outline-none placeholder-gray-600 transition-colors ${
+                duplicateError
+                  ? 'border-red-500 focus:ring-2 focus:ring-red-500'
+                  : 'border-gray-600 focus:ring-2 focus:ring-blue-500'
+              }`}
               placeholder="e.g. cylinder-flow-v2"
+              aria-invalid={!!duplicateError}
+              aria-describedby={duplicateError ? "duplicate-error-msg" : undefined}
             />
             {duplicateError && (
-              <p className="mt-2 text-sm text-red-400">{duplicateError}</p>
+              <p id="duplicate-error-msg" className="mt-2 text-sm text-red-400">{duplicateError}</p>
             )}
           </div>
           <div className="flex justify-end gap-2">
@@ -523,6 +535,33 @@ function App() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Case"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-gray-300">
+            Are you sure you want to delete <span className="font-semibold text-white">{selectedCase?.name}</span>? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none flex items-center gap-2"
+            >
+              {isDeleting && <Loader2 className="animate-spin" size={16} />}
+              Delete
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
