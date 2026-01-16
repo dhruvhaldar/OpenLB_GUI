@@ -28,6 +28,7 @@ function App() {
   const [duplicateName, setDuplicateName] = useState('');
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const duplicateInputRef = useRef<HTMLInputElement>(null);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isDuplicateModalOpen) {
@@ -38,6 +39,14 @@ function App() {
       }, 50);
     }
   }, [isDuplicateModalOpen]);
+
+  useEffect(() => {
+    if (isDeleteModalOpen) {
+      setTimeout(() => {
+        deleteCancelRef.current?.focus();
+      }, 50);
+    }
+  }, [isDeleteModalOpen]);
 
   // Optimization: Cache config content to avoid unnecessary network requests
   // Use a Map to implement LRU (Least Recently Used) eviction policy.
@@ -443,29 +452,32 @@ function App() {
                     </button>
                     <button
                         onClick={handleClearOutput}
-                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                        disabled={!output}
+                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400"
                         aria-label="Clear output"
-                        title="Clear output"
+                        title={!output ? "No output to clear" : "Clear output"}
                     >
                         <Eraser size={16} />
                     </button>
                     <button
                         onClick={handleDownloadOutput}
-                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                        disabled={!output}
+                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400 ${
                           downloadStatus === 'downloaded' ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
                         }`}
                         aria-label={downloadStatus === 'downloaded' ? "Download complete" : "Download output"}
-                        title={downloadStatus === 'downloaded' ? "Downloaded!" : "Download output"}
+                        title={!output ? "No output to download" : downloadStatus === 'downloaded' ? "Downloaded!" : "Download output"}
                     >
                         {downloadStatus === 'downloaded' ? <Check size={16} /> : <Download size={16} />}
                     </button>
                     <button
                         onClick={handleCopyOutput}
-                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                        disabled={!output}
+                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400 ${
                           copyStatus === 'copied' ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
                         }`}
                         aria-label={copyStatus === 'copied' ? "Copied successfully" : "Copy output"}
-                        title={copyStatus === 'copied' ? "Copied!" : "Copy to clipboard"}
+                        title={!output ? "No output to copy" : copyStatus === 'copied' ? "Copied!" : "Copy to clipboard"}
                     >
                         {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
                     </button>
@@ -548,6 +560,7 @@ function App() {
           </p>
           <div className="flex justify-end gap-3">
             <button
+              ref={deleteCancelRef}
               onClick={() => setIsDeleteModalOpen(false)}
               className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
             >
