@@ -469,7 +469,12 @@ function App() {
                     </button>
                   </div>
                 </div>
-                <LogViewer output={output} isWrapped={isLogWrapped} />
+                <LogViewer
+                  output={output}
+                  isWrapped={isLogWrapped}
+                  onBuild={handleBuild}
+                  onRun={handleRun}
+                />
               </div>
             </div>
           </>
