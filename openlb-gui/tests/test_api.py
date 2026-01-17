@@ -8,6 +8,8 @@ client = TestClient(app)
 def test_security_headers():
     response = client.get("/cases")
     assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("Cache-Control") == "no-store"
+    assert response.headers.get("Pragma") == "no-cache"
 
 def test_get_config_dos_protection():
     # Get a valid case path first

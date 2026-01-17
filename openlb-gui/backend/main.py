@@ -170,6 +170,12 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Content-Security-Policy"] = "default-src 'self'"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=()"
+    # Sentinel Enhancement: Prevent caching of sensitive data (config, logs)
+    # The 'no-store' directive prevents browsers and intermediate proxies from storing
+    # any version of the response, forcing a fresh fetch every time.
+    response.headers["Cache-Control"] = "no-store"
+    # Legacy compatibility for HTTP/1.0 proxies
+    response.headers["Pragma"] = "no-cache"
     return response
 
 app.add_middleware(LimitUploadSize, max_upload_size=2 * 1024 * 1024) # 2MB limit
