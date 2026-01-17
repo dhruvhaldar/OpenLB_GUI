@@ -47,6 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
   // happens in the background/next render, preventing input lag on large lists.
   const deferredFilter = useDeferredValue(filter);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   // Optimization: Pre-compute search strings to avoid repeated .toLowerCase() calls during filtering
   // This reduces the filtering complexity from O(N * M) to O(N) where M is the string length.
@@ -76,6 +77,20 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleClearFilter();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      // UX: Allow seamless navigation from search to results
+      const firstItem = listRef.current?.querySelector('button');
+      if (firstItem) {
+        (firstItem as HTMLElement).focus();
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      // UX: "Power User" shortcut - automatically select the top result
+      if (filteredCases.length > 0) {
+        onSelectCase(filteredCases[0]);
+        inputRef.current?.blur();
+      }
     }
   };
 
@@ -146,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
           </div>
           <div>
             <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Cases</h2>
-            <ul className="space-y-1" aria-labelledby="cases-heading" aria-busy={isLoading}>
+            <ul ref={listRef} className="space-y-1" aria-labelledby="cases-heading" aria-busy={isLoading}>
               {isLoading ? (
                 <>
                   <li className="animate-pulse flex items-center gap-2 px-3 py-2">
