@@ -5,3 +5,7 @@
 ## 2025-05-21 - Empty State Actions
 **Learning:** Passive empty states (like "No output") in technical tools can leave users stranded.
 **Action:** Always include primary action buttons (Build/Run) in empty states to reduce friction and guide the workflow.
+
+## 2025-05-22 - Search-to-List Keyboard Navigation
+**Learning:** Users searching in a sidebar often expect to jump immediately to results. Tabbing through search controls (like "Clear") breaks this flow.
+**Action:** Implement `ArrowDown` in search inputs to directly focus the first result, and `Enter` to auto-select it, creating a "Command Palette" feel.
