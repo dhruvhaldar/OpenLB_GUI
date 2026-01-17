@@ -89,7 +89,9 @@ class TrustedOriginMiddleware(BaseHTTPMiddleware):
             # 2. Check Referer (Fallback / Extra Security)
             # Referer includes path, so we verify it starts with an allowed origin
             elif referrer:
-                 if not any(referrer.startswith(allowed) for allowed in self.allowed_origins):
+                 # Sentinel Fix: Prevent "Prefix Match" bypass (e.g. allowed:5173 matching allowed:51730)
+                 # We ensure the referer matches the origin exactly OR starts with origin + "/"
+                 if not any(referrer == allowed or referrer.startswith(allowed + "/") for allowed in self.allowed_origins):
                      logger.warning(f"Blocked CSRF attempt. Referer: {referrer}")
                      return Response("Forbidden: Untrusted Referrer", status_code=403)
 
