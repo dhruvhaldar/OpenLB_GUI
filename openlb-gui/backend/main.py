@@ -263,6 +263,11 @@ def run_command_safe(cmd, cwd, env, stdout, timeout, max_output_size=10 * 1024 *
             # Sentinel Fix: Monitor process and output size to prevent DoS
             # Instead of a blocking wait(), we poll periodically.
             start_time = time.time()
+            # Optimization: Adaptive polling interval
+            # Start fast (5ms) to catch immediate failures/completions quickly, reducing latency.
+            # Exponentially back off to 0.1s to avoid high CPU usage for long-running processes.
+            sleep_time = 0.005
+
             while time.time() - start_time < timeout:
                 # 1. Check if process finished
                 if process.poll() is not None:
@@ -285,11 +290,10 @@ def run_command_safe(cmd, cwd, env, stdout, timeout, max_output_size=10 * 1024 *
                     except OSError:
                         pass # Should not happen with valid file descriptor
 
-                # Performance Optimization: Reduced polling interval from 0.5s to 0.1s.
-                # This improves responsiveness for short-lived commands (like fast builds or immediate failures)
-                # by reducing the latency penalty from ~500ms to ~100ms.
-                # The overhead of checking poll() and fstat() 10x/sec is negligible compared to the UX gain.
-                time.sleep(0.1)
+                # Performance Optimization: Adaptive sleep
+                time.sleep(sleep_time)
+                if sleep_time < 0.1:
+                    sleep_time = min(0.1, sleep_time * 2)
 
             # If loop finishes without returning, it timed out
             raise subprocess.TimeoutExpired(cmd, timeout)
