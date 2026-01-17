@@ -1,9 +1,11 @@
 import React, { memo, useLayoutEffect, useRef, useState, useEffect } from 'react';
-import { ArrowDown, Terminal } from 'lucide-react';
+import { ArrowDown, Terminal, Play, Settings } from 'lucide-react';
 
 interface LogViewerProps {
   output: string;
   isWrapped?: boolean;
+  onRun?: () => void;
+  onBuild?: () => void;
 }
 
 /**
@@ -17,7 +19,7 @@ interface LogViewerProps {
  * By isolating it here, we ensure it only re-renders when the 'output' prop actually changes,
  * avoiding re-renders when parent state (like copy button status, build status) changes.
  */
-const LogViewer: React.FC<LogViewerProps> = ({ output, isWrapped = false }) => {
+const LogViewer: React.FC<LogViewerProps> = ({ output, isWrapped = false, onRun, onBuild }) => {
   const logRef = useRef<HTMLPreElement>(null);
   // Default to true so it scrolls on first load
   const isAtBottomRef = useRef(true);
@@ -93,7 +95,29 @@ const LogViewer: React.FC<LogViewerProps> = ({ output, isWrapped = false }) => {
         <div className="flex-1 flex flex-col items-center justify-center font-mono text-sm">
           <Terminal size={48} className="mb-4 text-gray-600" aria-hidden="true" />
           <p className="text-gray-400">No output generated yet.</p>
-          <p className="text-xs mt-1 text-gray-400/75">Run a simulation to view logs.</p>
+          <p className="text-xs mt-1 text-gray-400/75 mb-6">Build or run the simulation to view logs.</p>
+          {(onBuild || onRun) && (
+            <div className="flex gap-4">
+              {onBuild && (
+                <button
+                  onClick={onBuild}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded flex items-center gap-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                  aria-label="Build simulation"
+                >
+                  <Settings size={14} /> Build
+                </button>
+              )}
+              {onRun && (
+                <button
+                  onClick={onRun}
+                  className="px-4 py-2 bg-green-700 hover:bg-green-600 text-white rounded flex items-center gap-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                  aria-label="Run simulation"
+                >
+                  <Play size={14} /> Run
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
       {output && (
