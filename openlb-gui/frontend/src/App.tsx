@@ -430,40 +430,44 @@ function App() {
                   <div className="flex gap-2">
                     <button
                         onClick={() => setIsLogWrapped(!isLogWrapped)}
-                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                        disabled={!output}
+                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
                             isLogWrapped ? 'text-blue-400 hover:text-blue-300 bg-gray-800' : 'text-gray-400 hover:text-white'
                         }`}
-                        aria-label={isLogWrapped ? "Disable word wrap" : "Enable word wrap"}
+                        aria-label={!output ? "No output to wrap" : isLogWrapped ? "Disable word wrap" : "Enable word wrap"}
                         aria-pressed={isLogWrapped}
-                        title={isLogWrapped ? "Disable word wrap" : "Enable word wrap"}
+                        title={!output ? "No output to wrap" : isLogWrapped ? "Disable word wrap" : "Enable word wrap"}
                     >
                         <WrapText size={16} />
                     </button>
                     <button
                         onClick={handleClearOutput}
-                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                        aria-label="Clear output"
-                        title="Clear output"
+                        disabled={!output}
+                        className="p-1 rounded text-gray-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label={!output ? "No output to clear" : "Clear output"}
+                        title={!output ? "No output to clear" : "Clear output"}
                     >
                         <Eraser size={16} />
                     </button>
                     <button
                         onClick={handleDownloadOutput}
-                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                        disabled={!output}
+                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
                           downloadStatus === 'downloaded' ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
                         }`}
-                        aria-label={downloadStatus === 'downloaded' ? "Download complete" : "Download output"}
-                        title={downloadStatus === 'downloaded' ? "Downloaded!" : "Download output"}
+                        aria-label={!output ? "No output to download" : downloadStatus === 'downloaded' ? "Download complete" : "Download output"}
+                        title={!output ? "No output to download" : downloadStatus === 'downloaded' ? "Downloaded!" : "Download output"}
                     >
                         {downloadStatus === 'downloaded' ? <Check size={16} /> : <Download size={16} />}
                     </button>
                     <button
                         onClick={handleCopyOutput}
-                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                        disabled={!output}
+                        className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
                           copyStatus === 'copied' ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
                         }`}
-                        aria-label={copyStatus === 'copied' ? "Copied successfully" : "Copy output"}
-                        title={copyStatus === 'copied' ? "Copied!" : "Copy to clipboard"}
+                        aria-label={!output ? "No output to copy" : copyStatus === 'copied' ? "Copied successfully" : "Copy output"}
+                        title={!output ? "No output to copy" : copyStatus === 'copied' ? "Copied!" : "Copy to clipboard"}
                     >
                         {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
                     </button>
