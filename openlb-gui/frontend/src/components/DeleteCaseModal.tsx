@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useRef, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 
@@ -17,6 +17,19 @@ const DeleteCaseModal: React.FC<DeleteCaseModalProps> = ({
   onConfirm,
   isDeleting
 }) => {
+  const cancelBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Small timeout to allow dialog to open and settle
+      // Focusing "Cancel" by default prevents accidental destructive actions
+      const timer = setTimeout(() => {
+        cancelBtnRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   return (
     <Modal
       isOpen={isOpen}
@@ -29,6 +42,7 @@ const DeleteCaseModal: React.FC<DeleteCaseModalProps> = ({
         </p>
         <div className="flex justify-end gap-3">
           <button
+            ref={cancelBtnRef}
             onClick={onClose}
             className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
           >
