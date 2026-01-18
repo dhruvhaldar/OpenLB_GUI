@@ -13,3 +13,7 @@
 ## 2026-01-20 - [Efficient Case Duplication]
 **Learning:** Simulation cases often accumulate massive build artifacts (`.o`) and output files (`.vtk`). Naively using `shutil.copytree` duplicates gigabytes of redundant data, causing I/O bottlenecks.
 **Action:** Use `shutil.ignore_patterns` with domain-specific extensions (`*.vtk`, `*.o`, `tmp`) to exclude artifacts during duplication, transforming O(GB) operations into O(KB).
+
+## 2024-05-24 - [Subprocess Polling Latency]
+**Learning:** Polling subprocesses with `process.poll()` and `time.sleep()` introduces unconditional latency equal to the sleep interval, even for instant commands. `process.wait(timeout=...)` blocks *up to* the timeout but returns immediately on completion.
+**Action:** Replace `sleep`-based polling loops with `wait(timeout)` loops to reduce execution latency for short-lived processes (e.g. `make` checks) while maintaining timeouts and output monitoring.

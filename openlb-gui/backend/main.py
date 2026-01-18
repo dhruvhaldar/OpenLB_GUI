@@ -275,16 +275,7 @@ def run_command_safe(cmd, cwd, env, stdout, timeout, max_output_size=10 * 1024 *
             sleep_time = 0.005
 
             while time.time() - start_time < timeout:
-                # 1. Check if process finished
-                if process.poll() is not None:
-                    # Final check for output size (in case it finished very fast)
-                    if stdout and os.fstat(stdout.fileno()).st_size > max_output_size:
-                        logger.warning(f"Process output exceeded limit ({max_output_size} bytes).")
-                        stdout.write(b"\n\n[ERROR: Output limit exceeded. Terminating process to prevent disk exhaustion.]\n")
-                        raise subprocess.TimeoutExpired(cmd, timeout)
-                    return process.returncode
-
-                # 2. Check output size (Disk Exhaustion Protection)
+                # 1. Check output size (Disk Exhaustion Protection)
                 if stdout:
                     try:
                         current_size = os.fstat(stdout.fileno()).st_size
@@ -296,8 +287,25 @@ def run_command_safe(cmd, cwd, env, stdout, timeout, max_output_size=10 * 1024 *
                     except OSError:
                         pass # Should not happen with valid file descriptor
 
-                # Performance Optimization: Adaptive sleep
-                time.sleep(sleep_time)
+                # 2. Wait for process or timeout
+                # Performance Optimization: Use process.wait(timeout=...) instead of time.sleep()
+                # This returns immediately if the process finishes, reducing latency for short commands
+                # and improving responsiveness.
+                try:
+                    return_code = process.wait(timeout=sleep_time)
+
+                    # Process finished. Final check for output size.
+                    if stdout and os.fstat(stdout.fileno()).st_size > max_output_size:
+                        logger.warning(f"Process output exceeded limit ({max_output_size} bytes).")
+                        stdout.write(b"\n\n[ERROR: Output limit exceeded. Terminating process to prevent disk exhaustion.]\n")
+                        raise subprocess.TimeoutExpired(cmd, timeout)
+
+                    return return_code
+                except subprocess.TimeoutExpired:
+                    # Process still running, loop continues
+                    pass
+
+                # Adaptive sleep calculation for NEXT wait
                 if sleep_time < 0.1:
                     sleep_time = min(0.1, sleep_time * 2)
 
