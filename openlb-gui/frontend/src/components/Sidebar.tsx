@@ -179,7 +179,7 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
                 </>
               ) : filteredCases.length > 0 ? (
                 filteredCases.map(c => (
-                  <li key={c.id}>
+                  <li key={c.id} className="cv-auto">
                     <SidebarItem
                       item={c}
                       isSelected={selectedCaseId === c.id}
