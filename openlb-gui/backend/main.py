@@ -167,9 +167,14 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    # Sentinel Enhancement: Prevent Clickjacking via CSP
+    # 'frame-ancestors none' prevents this site from being embedded in iframes,
+    # protecting against UI redress attacks.
+    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=(), microphone=()"
+    # Sentinel Enhancement: Strict Permissions Policy
+    # Explicitly disable powerful browser features to reduce attack surface (Defense in Depth).
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=()"
     # Sentinel Enhancement: Prevent caching of sensitive data (config, logs)
     # The 'no-store' directive prevents browsers and intermediate proxies from storing
     # any version of the response, forcing a fresh fetch every time.
