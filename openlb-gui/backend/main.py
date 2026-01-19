@@ -111,7 +111,7 @@ class TrustedOriginMiddleware(BaseHTTPMiddleware):
 
         return await call_next(request)
 
-class LimitUploadSize(BaseHTTPMiddleware):
+class StrictInputValidationMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, max_upload_size: int) -> None:
         super().__init__(app)
         self.max_upload_size = max_upload_size
@@ -120,15 +120,24 @@ class LimitUploadSize(BaseHTTPMiddleware):
         # Sentinel Enhancement: Secure by Default
         # Apply checks to all methods that can carry a body to prevent bypasses.
         if request.method in ["POST", "PUT", "PATCH"]:
+            from fastapi.responses import JSONResponse
+
+            # Sentinel Enhancement: Enforce Content-Type to prevent CSRF via Simple Requests
+            # HTML Forms cannot send application/json, so this prevents bypassing Preflight checks.
+            # We enforce strict API usage: backend only speaks JSON.
+            content_type = request.headers.get("content-type", "")
+            if not content_type.lower().startswith("application/json"):
+                 return JSONResponse(status_code=415, content={"detail": "Content-Type must be application/json"})
+
             # Security Fix: Enforce Content-Length
             # Reject Chunked Encoding or requests without Content-Length to prevent
             # Memory Exhaustion DoS attacks. The backend expects finite, known-size payloads (JSON/text).
             if 'content-length' not in request.headers:
-                 return Response("Content-Length required", status_code=411)
+                 return JSONResponse(status_code=411, content={"detail": "Content-Length required"})
 
             content_length = int(request.headers['content-length'])
             if content_length > self.max_upload_size:
-                return Response("Request body too large", status_code=413)
+                return JSONResponse(status_code=413, content={"detail": "Request body too large"})
         return await call_next(request)
 
 # Allow CORS for frontend dev
@@ -192,7 +201,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Pragma"] = "no-cache"
     return response
 
-app.add_middleware(LimitUploadSize, max_upload_size=2 * 1024 * 1024) # 2MB limit
+app.add_middleware(StrictInputValidationMiddleware, max_upload_size=2 * 1024 * 1024) # 2MB limit
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Resolve cases directory relative to the project root (2 levels up from backend/main.py)
