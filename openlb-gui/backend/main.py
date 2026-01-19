@@ -41,9 +41,18 @@ class RateLimiter:
 
     def is_rate_limited(self, ip: str) -> bool:
         now = time.time()
-        # Simple cleanup every minute to prevent memory leak from old IPs
+        # Sentinel Fix: Prevent Global Reset by cleaning up ONLY expired/empty IPs
+        # This prevents active users' history from being wiped, ensuring consistent rate limiting.
         if now - self.last_cleanup > 60:
-            self.requests.clear()
+            # Iterate over a list of keys to safely delete while iterating
+            for key in list(self.requests.keys()):
+                dq = self.requests[key]
+                # Remove expired requests for this IP
+                while dq and now - dq[0] > 60:
+                    dq.popleft()
+                # If deque is empty, remove the IP entry to free memory
+                if not dq:
+                    del self.requests[key]
             self.last_cleanup = now
 
         dq = self.requests[ip]
