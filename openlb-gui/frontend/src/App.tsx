@@ -55,19 +55,34 @@ function App() {
     return currentLog.slice(currentLog.length - keepLength) + newLog;
   }, []);
 
+  // Optimization: Deep comparison helper for cases
+  // Prevents unnecessary React.memo re-calculations in Sidebar and layout thrashing
+  // when the fetched case list is identical to the current state.
+  // Using JSON.stringify is fast for this data size and avoids brittle field-by-field checks.
+  const areCasesEqual = useCallback((prev: Case[], next: Case[]) => {
+    if (prev.length !== next.length) return false;
+    if (prev === next) return true;
+    return JSON.stringify(prev) === JSON.stringify(next);
+  }, []);
+
   const refreshCases = useCallback(async () => {
     setIsLoadingCases(true);
     try {
       const res = await fetch(`${API_URL}/cases`);
       if (!res.ok) throw new Error('Failed to fetch cases');
       const data = await res.json();
-      setCases(data);
+
+      // Optimization: Avoid state update if data is identical
+      setCases(prev => {
+        if (areCasesEqual(prev, data)) return prev;
+        return data;
+      });
     } catch (e) {
       console.error('Failed to fetch cases', e);
     } finally {
       setIsLoadingCases(false);
     }
-  }, []);
+  }, [areCasesEqual]);
 
   useEffect(() => {
     refreshCases();
@@ -269,7 +284,12 @@ function App() {
       // Refresh cases
       const casesRes = await fetch(`${API_URL}/cases`);
       const casesData = await casesRes.json();
-      setCases(casesData);
+
+      // Optimization: Avoid state update if data is identical (though unlikely for duplicate)
+      setCases(prev => {
+        if (areCasesEqual(prev, casesData)) return prev;
+        return casesData;
+      });
 
       // Select the new case
       const newCase = casesData.find((c: Case) => c.path === data.new_path);
@@ -283,7 +303,7 @@ function App() {
     } finally {
       setIsDuplicating(false);
     }
-  }, [selectedCase, duplicateName, handleSelectCase]);
+  }, [selectedCase, duplicateName, handleSelectCase, areCasesEqual]);
 
   const handleDeleteClick = useCallback(() => {
     if (!selectedCase) return;
@@ -308,7 +328,13 @@ function App() {
       // Refresh cases
       const casesRes = await fetch(`${API_URL}/cases`);
       const casesData = await casesRes.json();
-      setCases(casesData);
+
+      // Optimization: Avoid state update if data is identical
+      setCases(prev => {
+        if (areCasesEqual(prev, casesData)) return prev;
+        return casesData;
+      });
+
       setSelectedCase(null);
       setConfig(null);
       setOutput('');
@@ -319,7 +345,7 @@ function App() {
     } finally {
       setIsDeleting(false);
     }
-  }, [selectedCase]);
+  }, [selectedCase, areCasesEqual]);
 
   const handleCloseDuplicate = useCallback(() => {
     setIsDuplicateModalOpen(false);
