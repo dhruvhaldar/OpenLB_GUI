@@ -28,6 +28,7 @@ function App() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [duplicateName, setDuplicateName] = useState('');
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Optimization: Cache config content to avoid unnecessary network requests
   // Use a Map to implement LRU (Least Recently Used) eviction policy.
@@ -286,6 +287,7 @@ function App() {
 
   const handleDeleteClick = useCallback(() => {
     if (!selectedCase) return;
+    setDeleteError(null);
     setIsDeleteModalOpen(true);
   }, [selectedCase]);
 
@@ -293,13 +295,14 @@ function App() {
     if (!selectedCase) return;
 
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       const res = await fetch(`${API_URL}/cases?case_path=${encodeURIComponent(selectedCase.path)}`, {
         method: 'DELETE'
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to delete: ${err.detail}`);
+        setDeleteError(err.detail || 'Failed to delete');
         return;
       }
       // Refresh cases
@@ -312,7 +315,7 @@ function App() {
       setIsDeleteModalOpen(false);
     } catch (e) {
       console.error('Delete failed', e);
-      alert('Failed to delete case');
+      setDeleteError('Failed to delete case');
     } finally {
       setIsDeleting(false);
     }
@@ -511,6 +514,7 @@ function App() {
         caseName={selectedCase?.name}
         onConfirm={confirmDelete}
         isDeleting={isDeleting}
+        error={deleteError}
       />
     </div>
   );

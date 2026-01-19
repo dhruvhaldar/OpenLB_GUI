@@ -8,6 +8,7 @@ interface DeleteCaseModalProps {
   caseName: string | undefined;
   onConfirm: () => void;
   isDeleting: boolean;
+  error?: string | null;
 }
 
 const DeleteCaseModal: React.FC<DeleteCaseModalProps> = ({
@@ -15,7 +16,8 @@ const DeleteCaseModal: React.FC<DeleteCaseModalProps> = ({
   onClose,
   caseName,
   onConfirm,
-  isDeleting
+  isDeleting,
+  error
 }) => {
   return (
     <Modal
@@ -27,6 +29,13 @@ const DeleteCaseModal: React.FC<DeleteCaseModalProps> = ({
         <p className="text-gray-300">
           Are you sure you want to delete <span className="font-semibold text-white">{caseName}</span>? This action cannot be undone.
         </p>
+
+        {error && (
+          <div className="p-3 bg-red-900/50 border border-red-700/50 rounded text-red-200 text-sm" role="alert">
+            {error}
+          </div>
+        )}
+
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
