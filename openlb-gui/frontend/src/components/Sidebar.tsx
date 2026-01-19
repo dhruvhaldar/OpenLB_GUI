@@ -54,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
   // We compute this once when 'cases' changes, rather than on every keystroke.
   const searchIndex = useMemo(() => {
     return cases.map(c =>
-      `${c.name.toLowerCase()} ${c.domain.toLowerCase()}`
+      `${c.name} ${c.domain}`.toLowerCase()
     );
   }, [cases]);
 
