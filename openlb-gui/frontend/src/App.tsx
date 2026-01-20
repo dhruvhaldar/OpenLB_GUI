@@ -423,7 +423,12 @@ function App() {
                   ) : (
                     <Settings size={16} aria-hidden="true" />
                   )}
-                  {status === 'building' ? 'Building...' : 'Build'}
+                  {status === 'building' ? 'Building...' : (
+                    <>
+                      Build
+                      <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-black/20 rounded opacity-80">Ctrl+B</kbd>
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={handleRun}
@@ -436,7 +441,12 @@ function App() {
                   ) : (
                     <Play size={16} aria-hidden="true" />
                   )}
-                  {status === 'running' ? 'Running...' : 'Run'}
+                  {status === 'running' ? 'Running...' : (
+                    <>
+                      Run
+                      <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-black/20 rounded opacity-80">Ctrl+Enter</kbd>
+                    </>
+                  )}
                 </button>
               </div>
             </header>

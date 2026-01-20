@@ -13,3 +13,7 @@
 ## 2025-05-23 - Contextual Control Availability
 **Learning:** Persistent toolbars for content areas (e.g., LogViewer) clutter the UI when the content is empty.
 **Action:** Explicitly disable and visually dim controls (Copy, Download, Clear) when their target content is missing to indicate unavailability and focus attention on primary actions.
+
+## 2025-05-24 - Keyboard Shortcut Discoverability
+**Learning:** Power users rely on keyboard shortcuts (Ctrl+B, Ctrl+Enter), but these are often hidden in tooltips, making them hard to discover.
+**Action:** Add subtle visible hints (e.g., small `<kbd>` badges) directly within action buttons to teach users shortcuts without requiring them to hover or read documentation.
