@@ -17,3 +17,7 @@
 ## 2025-05-24 - Keyboard Shortcut Discoverability
 **Learning:** Power users rely on keyboard shortcuts (Ctrl+B, Ctrl+Enter), but these are often hidden in tooltips, making them hard to discover.
 **Action:** Add subtle visible hints (e.g., small `<kbd>` badges) directly within action buttons to teach users shortcuts without requiring them to hover or read documentation.
+
+## 2025-05-25 - List Navigation Delegation
+**Learning:** Managing keyboard navigation (Arrow keys) for dynamic lists is cleanest when delegated to the container (`ul`) rather than individual items.
+**Action:** Attach `onKeyDown` to the parent container and use `document.activeElement` to determine the current focus index, simplifying state management and reducing event listeners.

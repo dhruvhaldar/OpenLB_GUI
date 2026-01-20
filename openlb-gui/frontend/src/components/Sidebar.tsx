@@ -112,6 +112,35 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
+  const handleListKeyDown = (e: React.KeyboardEvent) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+
+    e.preventDefault();
+    const buttons = Array.from(listRef.current?.querySelectorAll('button') || []) as HTMLButtonElement[];
+    const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
+
+    // Fallback if focus is somehow lost but inside list area
+    if (currentIndex === -1 && buttons.length > 0) {
+      buttons[0].focus();
+      return;
+    }
+
+    let nextIndex = currentIndex;
+    if (e.key === 'ArrowDown') {
+      nextIndex = Math.min(currentIndex + 1, buttons.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      nextIndex = Math.max(currentIndex - 1, 0);
+    } else if (e.key === 'Home') {
+      nextIndex = 0;
+    } else if (e.key === 'End') {
+      nextIndex = buttons.length - 1;
+    }
+
+    if (nextIndex !== currentIndex) {
+      buttons[nextIndex]?.focus();
+    }
+  };
+
   return (
     <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
       <div className="p-4 flex items-center justify-between">
@@ -161,7 +190,13 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
           </div>
           <div>
             <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Cases</h2>
-            <ul ref={listRef} className="space-y-1" aria-labelledby="cases-heading" aria-busy={isLoading}>
+            <ul
+              ref={listRef}
+              className="space-y-1"
+              aria-labelledby="cases-heading"
+              aria-busy={isLoading}
+              onKeyDown={handleListKeyDown}
+            >
               {isLoading ? (
                 <>
                   <li className="animate-pulse flex items-center gap-2 px-3 py-2">
