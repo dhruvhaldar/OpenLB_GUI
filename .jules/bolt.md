@@ -17,3 +17,7 @@
 ## 2024-05-24 - [Subprocess Polling Latency]
 **Learning:** Polling subprocesses with `process.poll()` and `time.sleep()` introduces unconditional latency equal to the sleep interval, even for instant commands. `process.wait(timeout=...)` blocks *up to* the timeout but returns immediately on completion.
 **Action:** Replace `sleep`-based polling loops with `wait(timeout)` loops to reduce execution latency for short-lived processes (e.g. `make` checks) while maintaining timeouts and output monitoring.
+
+## 2024-05-24 - [List Reconciliation Optimization]
+**Learning:** Even with `React.memo` on list items, the parent component still performs O(N) work to reconcile the list container (creating VDOM nodes for each item) on every render. This impacts responsiveness of controlled inputs (like search filters) in the same component.
+**Action:** Extract the list mapping logic into a separate, memoized container component. This stops React reconciliation at the container level when the list data hasn't changed, turning O(N) work into O(1) during input typing.
