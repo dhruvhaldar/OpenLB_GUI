@@ -15,6 +15,7 @@ import threading
 import shutil
 import time
 import signal
+import stat
 from collections import defaultdict, deque
 from pathlib import Path
 from functools import lru_cache
@@ -816,6 +817,16 @@ def save_config(req: ConfigRequest, request: Request):
 
     config_path = os.path.join(safe_path, "config.xml")
 
+    # Sentinel Enhancement: Preserve file permissions
+    # In shared environments, users may restrict file permissions (e.g. 600) to protect sensitive data.
+    # We must preserve these permissions when overwriting the file.
+    original_mode = 0o644
+    if os.path.exists(config_path):
+        try:
+            original_mode = stat.S_IMODE(os.stat(config_path).st_mode)
+        except OSError:
+            pass
+
     # Security Enhancement: Atomic Write
     # Write to a temporary file first, then rename it to the target file.
     # This prevents data corruption (partial writes) and ensures atomicity.
@@ -825,9 +836,9 @@ def save_config(req: ConfigRequest, request: Request):
     try:
         with tempfile.NamedTemporaryFile(mode='w', dir=safe_path, delete=False, suffix=".tmp") as tmp:
             tmp_name = tmp.name
-            # Set permissions to 644 (owner rw, group r, other r) to match standard behavior
-            # tempfile defaults to 600 which might be too restrictive if other users/groups need read access
-            os.chmod(tmp_name, 0o644)
+            # Set permissions to match the original file (or default to 644)
+            # This respects the user's security intent (Principle of Least Privilege).
+            os.chmod(tmp_name, original_mode)
             tmp.write(req.content)
             tmp.flush()
             os.fsync(tmp.fileno()) # Ensure data is written to disk
