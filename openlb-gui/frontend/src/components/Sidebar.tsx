@@ -32,6 +32,33 @@ const SidebarItem = memo(({ item, isSelected, onSelect }: SidebarItemProps) => {
   );
 });
 
+interface SidebarListItemsProps {
+  cases: Case[];
+  selectedId: string | undefined;
+  onSelect: (c: Case) => void;
+}
+
+// Optimization: Isolate the list rendering to prevent reconciliation of the entire list
+// when parent Sidebar re-renders (e.g. during typing in the filter input).
+// Even though SidebarItem is memoized, re-rendering the mapping loop creates N new Element objects
+// and triggers N prop comparisons. By memoizing the list container, we skip this entirely
+// when 'cases' (filtered list) hasn't changed.
+const SidebarListItems = memo(({ cases, selectedId, onSelect }: SidebarListItemsProps) => {
+  return (
+    <>
+      {cases.map(c => (
+        <li key={c.id} className="cv-auto">
+          <SidebarItem
+            item={c}
+            isSelected={selectedId === c.id}
+            onSelect={onSelect}
+          />
+        </li>
+      ))}
+    </>
+  );
+});
+
 interface SidebarProps {
   cases: Case[];
   selectedCaseId: string | undefined;
@@ -178,15 +205,11 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
                   </li>
                 </>
               ) : filteredCases.length > 0 ? (
-                filteredCases.map(c => (
-                  <li key={c.id} className="cv-auto">
-                    <SidebarItem
-                      item={c}
-                      isSelected={selectedCaseId === c.id}
-                      onSelect={onSelectCase}
-                    />
-                  </li>
-                ))
+                <SidebarListItems
+                  cases={filteredCases}
+                  selectedId={selectedCaseId}
+                  onSelect={onSelectCase}
+                />
               ) : (
                 <li className="text-gray-500 text-sm px-3 py-2 text-center flex flex-col items-center gap-2">
                   <span className="italic">{cases.length === 0 ? 'No cases found' : 'No matching cases'}</span>
