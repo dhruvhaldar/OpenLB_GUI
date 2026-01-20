@@ -58,11 +58,33 @@ function App() {
   // Optimization: Deep comparison helper for cases
   // Prevents unnecessary React.memo re-calculations in Sidebar and layout thrashing
   // when the fetched case list is identical to the current state.
-  // Using JSON.stringify is fast for this data size and avoids brittle field-by-field checks.
+  // UPDATE: Replaced JSON.stringify with a Map-based comparison.
+  // This provides two benefits:
+  // 1. Performance: Avoids O(N) string serialization and allocation.
+  // 2. Stability: Ignores order differences. If the backend returns the same cases
+  //    in a different order (common with os.scandir), we treat it as "equal"
+  //    and preserve the current frontend order, preventing UI jumps.
   const areCasesEqual = useCallback((prev: Case[], next: Case[]) => {
-    if (prev.length !== next.length) return false;
     if (prev === next) return true;
-    return JSON.stringify(prev) === JSON.stringify(next);
+    if (prev.length !== next.length) return false;
+
+    // Optimization: Create a Map of the previous cases for O(1) lookup
+    const prevMap = new Map(prev.map(c => [c.id, c]));
+
+    for (const nextItem of next) {
+      const prevItem = prevMap.get(nextItem.id);
+      if (!prevItem) return false;
+
+      // Check for content changes
+      if (
+        prevItem.name !== nextItem.name ||
+        prevItem.domain !== nextItem.domain ||
+        prevItem.path !== nextItem.path
+      ) {
+        return false;
+      }
+    }
+    return true;
   }, []);
 
   const refreshCases = useCallback(async () => {
