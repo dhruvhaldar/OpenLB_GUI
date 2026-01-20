@@ -529,6 +529,20 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         return {"success": True, "new_path": os.path.relpath(target_path, CASES_DIR)}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
+
+        # Sentinel Fix: Cleanup on failure
+        # If duplication fails (e.g. Disk Full), remove the partial directory
+        # to prevent "zombie" directories and Disk Exhaustion.
+        # CRITICAL: Do NOT delete if the error was that the directory already exists (FileExistsError).
+        # This prevents accidental deletion of existing cases in race conditions.
+        is_exist_error = isinstance(e, FileExistsError)
+        if not is_exist_error and os.path.exists(target_path):
+            try:
+                shutil.rmtree(target_path)
+                logger.info(f"Cleaned up partial directory: {target_path}")
+            except Exception as cleanup_error:
+                logger.error(f"Failed to cleanup partial directory {target_path}: {cleanup_error}")
+
         raise HTTPException(status_code=500, detail="Failed to duplicate case")
 
 @app.delete("/cases")
