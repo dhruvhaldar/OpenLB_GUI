@@ -70,7 +70,7 @@ class RateLimiter:
         dq.append(now)
         return False
 
-rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive actions
+rate_limiter = RateLimiter(requests_per_minute=60) # 60 req/min/IP for all actions
 
 # Trusted Origins
 ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
@@ -168,10 +168,10 @@ app.add_middleware(TrustedOriginMiddleware, allowed_origins=ALLOWED_ORIGINS)
 # Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    # Rate Limiting for state-changing operations
+    # Rate Limiting
     # We apply this before processing the request
-    # Sentinel: Broadened scope to all state-changing methods to prevent bypasses and future oversight
-    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+    # Sentinel: Broadened scope to ALL methods (except OPTIONS/HEAD) to prevent DoS (e.g. GET /cases spam)
+    if request.method not in ["OPTIONS", "HEAD"]:
         client_ip = request.client.host if request.client else "unknown"
         if rate_limiter.is_rate_limited(client_ip):
             logger.warning(f"Rate limit exceeded for {client_ip} on {request.url.path}")
