@@ -21,3 +21,7 @@
 ## 2025-05-25 - List Navigation Delegation
 **Learning:** Managing keyboard navigation (Arrow keys) for dynamic lists is cleanest when delegated to the container (`ul`) rather than individual items.
 **Action:** Attach `onKeyDown` to the parent container and use `document.activeElement` to determine the current focus index, simplifying state management and reducing event listeners.
+
+## 2026-01-21 - Actionable Onboarding
+**Learning:** A generic "No Selection" state is confusing for first-time users who have an empty dataset.
+**Action:** Distinguish between "Empty Collection" and "No Selection" states. Use the "Empty Collection" state to provide specific onboarding instructions (e.g., "Add files here").
