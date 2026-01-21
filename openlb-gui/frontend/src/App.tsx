@@ -438,6 +438,7 @@ function App() {
                   onClick={handleBuild}
                   disabled={status !== 'idle'}
                   title={status === 'building' ? 'Building simulation...' : status === 'running' ? 'Cannot build while simulation is running' : 'Build simulation (Ctrl+B)'}
+                  aria-keyshortcuts="Control+B"
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                 >
                   {status === 'building' ? (
@@ -456,6 +457,7 @@ function App() {
                   onClick={handleRun}
                   disabled={status !== 'idle'}
                   title={status === 'running' ? 'Running simulation...' : status === 'building' ? 'Cannot run while simulation is building' : 'Run simulation (Ctrl+Enter)'}
+                  aria-keyshortcuts="Control+Enter"
                   className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                 >
                   {status === 'running' ? (
@@ -544,13 +546,29 @@ function App() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
-            <div className="p-4 bg-gray-800 rounded-full">
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4 p-8">
+            <div className="p-4 bg-gray-800 rounded-full animate-in fade-in zoom-in duration-300">
               <FolderOpen size={48} className="text-gray-600" aria-hidden="true" />
             </div>
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-300">No Case Selected</h3>
-              <p className="text-sm mt-1 text-gray-400">Select a simulation case from the sidebar to begin.</p>
+            <div className="text-center max-w-md">
+              <h3 className="text-lg font-medium text-gray-300">
+                {cases.length === 0 && !isLoadingCases ? 'No Cases Found' : 'No Case Selected'}
+              </h3>
+              <p className="text-sm mt-2 text-gray-400 leading-relaxed">
+                {cases.length === 0 && !isLoadingCases ? (
+                  <>
+                    Your <code>my_cases</code> directory is empty. Add simulation files there to get started.
+                  </>
+                ) : (
+                  <>
+                    Select a simulation case from the sidebar to view its configuration and logs.
+                    <br />
+                    <span className="inline-block mt-2 text-xs bg-gray-800 px-2 py-1 rounded text-gray-500">
+                      Tip: Press <kbd className="font-mono text-gray-300">/</kbd> to search
+                    </span>
+                  </>
+                )}
+              </p>
             </div>
           </div>
         )}

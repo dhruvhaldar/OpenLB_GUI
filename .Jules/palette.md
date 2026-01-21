@@ -21,3 +21,7 @@
 ## 2025-05-25 - List Navigation Delegation
 **Learning:** Managing keyboard navigation (Arrow keys) for dynamic lists is cleanest when delegated to the container (`ul`) rather than individual items.
 **Action:** Attach `onKeyDown` to the parent container and use `document.activeElement` to determine the current focus index, simplifying state management and reducing event listeners.
+
+## 2025-05-26 - Actionable Empty States & Shortcut Hints
+**Learning:** Empty states shouldn't just describe the problem ("No Case Selected") but should guide the next interaction ("Press / to search").
+**Action:** Enhance empty states with "Tip" sections that teach relevant keyboard shortcuts, turning a dead-end screen into a learning opportunity.
