@@ -4,14 +4,16 @@ import type { Case } from '../types';
 
 interface SidebarItemProps {
   item: Case;
+  index: number;
   isSelected: boolean;
   onSelect: (c: Case) => void;
 }
 
-const SidebarItem = memo(({ item, isSelected, onSelect }: SidebarItemProps) => {
+const SidebarItem = memo(({ item, index, isSelected, onSelect }: SidebarItemProps) => {
   return (
     <button
       onClick={() => onSelect(item)}
+      data-index={index}
       title={item.name}
       aria-current={isSelected ? 'true' : undefined}
       className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
@@ -25,6 +27,7 @@ const SidebarItem = memo(({ item, isSelected, onSelect }: SidebarItemProps) => {
   // but this individual item hasn't changed. Standard React.memo (shallow compare) fails here
   // because the 'item' object reference changes on every fetch.
   return (
+    prev.index === next.index &&
     prev.isSelected === next.isSelected &&
     prev.item.id === next.item.id &&
     prev.item.name === next.item.name &&
@@ -46,10 +49,11 @@ interface SidebarListItemsProps {
 const SidebarListItems = memo(({ cases, selectedId, onSelect }: SidebarListItemsProps) => {
   return (
     <>
-      {cases.map(c => (
+      {cases.map((c, i) => (
         <li key={c.id} className="cv-auto">
           <SidebarItem
             item={c}
+            index={i}
             isSelected={selectedId === c.id}
             onSelect={onSelect}
           />
@@ -143,28 +147,43 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
 
     e.preventDefault();
-    const buttons = Array.from(listRef.current?.querySelectorAll('button') || []) as HTMLButtonElement[];
-    const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
 
-    // Fallback if focus is somehow lost but inside list area
-    if (currentIndex === -1 && buttons.length > 0) {
-      buttons[0].focus();
-      return;
+    // Optimization: Avoid querySelectorAll (O(N)) on every key press
+    // Use data-index and direct children access (O(1)) instead.
+    const activeEl = document.activeElement as HTMLElement;
+    const indexStr = activeEl.dataset.index;
+
+    // Fallback if not on a list item (e.g., lost focus or empty state button)
+    if (!indexStr) {
+        // If we have items, focus the first one
+        if (filteredCases.length > 0 && listRef.current?.children.length) {
+            const firstButton = listRef.current.children[0].firstElementChild as HTMLElement;
+            firstButton?.focus();
+        }
+        return;
     }
 
+    const currentIndex = parseInt(indexStr, 10);
+    const listItems = listRef.current?.children;
+    if (!listItems) return;
+
     let nextIndex = currentIndex;
+    const maxIndex = filteredCases.length - 1;
+
     if (e.key === 'ArrowDown') {
-      nextIndex = Math.min(currentIndex + 1, buttons.length - 1);
+      nextIndex = Math.min(currentIndex + 1, maxIndex);
     } else if (e.key === 'ArrowUp') {
       nextIndex = Math.max(currentIndex - 1, 0);
     } else if (e.key === 'Home') {
       nextIndex = 0;
     } else if (e.key === 'End') {
-      nextIndex = buttons.length - 1;
+      nextIndex = maxIndex;
     }
 
     if (nextIndex !== currentIndex) {
-      buttons[nextIndex]?.focus();
+      // Directly access the next item's button (assumes structure: <li><button>...)
+      const nextItem = listItems[nextIndex]?.firstElementChild as HTMLElement;
+      nextItem?.focus();
     }
   };
 
