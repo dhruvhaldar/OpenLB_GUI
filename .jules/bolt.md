@@ -21,3 +21,7 @@
 ## 2024-05-24 - [List Reconciliation Optimization]
 **Learning:** Even with `React.memo` on list items, the parent component still performs O(N) work to reconcile the list container (creating VDOM nodes for each item) on every render. This impacts responsiveness of controlled inputs (like search filters) in the same component.
 **Action:** Extract the list mapping logic into a separate, memoized container component. This stops React reconciliation at the container level when the list data hasn't changed, turning O(N) work into O(1) during input typing.
+
+## 2024-05-24 - [O(1) Keyboard Navigation]
+**Learning:** Using `querySelectorAll` in a `keydown` handler involves scanning the DOM tree (O(N)), which becomes a bottleneck for large lists even if they are visually optimized (e.g. `content-visibility`).
+**Action:** Use data attributes (e.g. `data-index`) and direct `children` collection access to implement O(1) navigation logic, bypassing the need for DOM queries.

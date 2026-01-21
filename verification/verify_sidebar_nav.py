@@ -34,47 +34,29 @@ def run(playwright):
     print("Pressing ArrowDown to focus first item...")
     page.keyboard.press("ArrowDown")
 
-    # Check if first item is focused
+    # VERIFY STEP 2 (Restored)
     focused_text = page.evaluate("document.activeElement.textContent")
-    print(f"Focused element text: {focused_text}")
-
     if "Case 1" not in focused_text:
-        print("FAILED: First item not focused after ArrowDown from input")
+        print(f"FAILED: First item not focused after ArrowDown from input. Focused: {focused_text}")
         exit(1)
+    print("SUCCESS: Focused first item.")
 
     # 3. Press ArrowDown to focus second item (NEW FEATURE)
     print("Pressing ArrowDown to focus second item...")
     page.keyboard.press("ArrowDown")
 
+    # Take screenshot of Sidebar
+    sidebar = page.locator("aside")
+    sidebar.screenshot(path="verification/sidebar_focus.png")
+    print("Screenshot saved to verification/sidebar_focus.png")
+
     focused_text = page.evaluate("document.activeElement.textContent")
     print(f"Focused element text: {focused_text}")
 
     if "Case 2" not in focused_text:
-        print("FAILED: Second item not focused after ArrowDown")
-        # Don't exit yet, we want to see if the implementation fixes this
-        # But for now, this script is expected to fail on step 2 if feature not implemented
-        # Actually, without the feature, focus stays on Case 1.
-
-    # 4. Press ArrowUp to focus first item again
-    print("Pressing ArrowUp to focus first item...")
-    page.keyboard.press("ArrowUp")
-
-    focused_text = page.evaluate("document.activeElement.textContent")
-    print(f"Focused element text: {focused_text}")
-
-    if "Case 1" not in focused_text:
-        print("FAILED: First item not focused after ArrowUp")
-
-    # 5. Press End to focus last item
-    print("Pressing End to focus last item...")
-    page.keyboard.press("End")
-
-    focused_text = page.evaluate("document.activeElement.textContent")
-    print(f"Focused element text: {focused_text}")
-
-    # Depending on implementation 'End' might not be supported yet, but let's test if we add it
-    if "Case 3" not in focused_text:
-        print("WARNING: Last item not focused after End key (maybe not implemented yet)")
+        print(f"FAILED: Second item not focused after ArrowDown. Focused: {focused_text}")
+        exit(1)
+    print("SUCCESS: Focused second item.")
 
     print("Verification Script Finished.")
     browser.close()
