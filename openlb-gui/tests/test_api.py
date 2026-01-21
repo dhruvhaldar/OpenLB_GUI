@@ -10,7 +10,10 @@ def test_security_headers():
     assert response.headers.get("X-Content-Type-Options") == "nosniff"
     assert response.headers.get("Cache-Control") == "no-store"
     assert response.headers.get("Pragma") == "no-cache"
-    assert "frame-ancestors 'none'" in response.headers.get("Content-Security-Policy")
+    csp = response.headers.get("Content-Security-Policy")
+    assert "frame-ancestors 'none'" in csp
+    assert "object-src 'none'" in csp
+    assert "base-uri 'none'" in csp
     assert "camera=()" in response.headers.get("Permissions-Policy")
 
 def test_get_config_dos_protection():
