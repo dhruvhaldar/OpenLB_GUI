@@ -548,9 +548,29 @@ function App() {
             <div className="p-4 bg-gray-800 rounded-full">
               <FolderOpen size={48} className="text-gray-600" aria-hidden="true" />
             </div>
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-300">No Case Selected</h3>
-              <p className="text-sm mt-1 text-gray-400">Select a simulation case from the sidebar to begin.</p>
+            <div className="text-center max-w-md px-4">
+              <h3 className="text-lg font-medium text-gray-300">
+                {isLoadingCases ? 'Loading...' : cases.length === 0 ? 'No Cases Found' : 'No Case Selected'}
+              </h3>
+              <div className="text-sm mt-1 text-gray-400">
+                {isLoadingCases ? (
+                   <p>Fetching simulation cases...</p>
+                ) : cases.length === 0 ? (
+                   <>
+                     Your <code className="bg-gray-800 px-1 py-0.5 rounded text-gray-300">my_cases</code> directory is empty.
+                     <br className="mb-2"/>
+                     Add simulation projects there to get started.
+                   </>
+                ) : (
+                   <>
+                     Select a simulation case from the sidebar to begin.
+                     <br />
+                     <span className="text-xs opacity-75 mt-2 inline-block">
+                       Press <kbd className="font-mono bg-gray-800 px-1.5 py-0.5 rounded border border-gray-700 text-gray-300">/</kbd> to filter cases
+                     </span>
+                   </>
+                )}
+              </div>
             </div>
           </div>
         )}

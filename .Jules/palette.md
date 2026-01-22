@@ -21,3 +21,7 @@
 ## 2025-05-25 - List Navigation Delegation
 **Learning:** Managing keyboard navigation (Arrow keys) for dynamic lists is cleanest when delegated to the container (`ul`) rather than individual items.
 **Action:** Attach `onKeyDown` to the parent container and use `document.activeElement` to determine the current focus index, simplifying state management and reducing event listeners.
+
+## 2025-05-26 - Context-Aware Empty States
+**Learning:** A single generic "No Selection" state is confusing when the data source itself is empty. Users need to know if they need to *create* data or just *select* it.
+**Action:** Implement distinct empty states: 1) "No Data Found" with instructions on how to create/add data, and 2) "No Selection" with hints on how to select or search for existing data.
