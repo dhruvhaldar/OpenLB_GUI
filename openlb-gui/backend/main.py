@@ -189,7 +189,11 @@ async def add_security_headers(request: Request, call_next):
     # Sentinel Enhancement: Prevent Clickjacking via CSP
     # 'frame-ancestors none' prevents this site from being embedded in iframes,
     # protecting against UI redress attacks.
-    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+    # Sentinel Enhancement: Strengthen CSP with explicit directives
+    # - object-src 'none': Prevents plugins (Flash, Java)
+    # - base-uri 'none': Prevents <base> tag hijacking
+    # - form-action 'self': Prevents form submission to external sites
+    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     # Sentinel Enhancement: Strict Permissions Policy
     # Explicitly disable powerful browser features to reduce attack surface (Defense in Depth).
