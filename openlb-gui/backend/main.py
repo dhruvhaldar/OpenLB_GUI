@@ -204,6 +204,10 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cache-Control"] = "no-store"
     # Legacy compatibility for HTTP/1.0 proxies
     response.headers["Pragma"] = "no-cache"
+    # Sentinel Enhancement: Prevent cross-domain data loading (e.g. Flash)
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    # Sentinel Enhancement: Isolate browsing context to prevent cross-origin popups
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     return response
 
 app.add_middleware(StrictInputValidationMiddleware, max_upload_size=2 * 1024 * 1024) # 2MB limit
@@ -224,9 +228,9 @@ CASES_DIR_WITH_SEP = os.path.join(CASES_DIR, "")
 execution_lock = threading.Lock()
 
 # Pre-compile regex for control characters optimization
-# Matches any char < 32 (0x20) INCLUDING tab (0x09)
-# Security Fix: Rejecting tabs prevents Log Injection (CWE-117) and visual spoofing.
-CONTROL_CHARS = re.compile(r'[\x00-\x1f]')
+# Matches any char < 32 (0x20) INCLUDING tab (0x09) and DEL (0x7f)
+# Security Fix: Rejecting tabs and DEL prevents Log Injection (CWE-117) and Terminal Injection.
+CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
 
 # Pre-compile Regex for hidden path check optimization
 # Matches a dot at the beginning of a string or immediately after a separator
