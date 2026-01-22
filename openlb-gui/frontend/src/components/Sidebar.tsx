@@ -4,15 +4,17 @@ import type { Case } from '../types';
 
 interface SidebarItemProps {
   item: Case;
+  index: number;
   isSelected: boolean;
   onSelect: (c: Case) => void;
 }
 
-const SidebarItem = memo(({ item, isSelected, onSelect }: SidebarItemProps) => {
+const SidebarItem = memo(({ item, index, isSelected, onSelect }: SidebarItemProps) => {
   return (
     <button
       onClick={() => onSelect(item)}
       title={item.name}
+      data-index={index}
       aria-current={isSelected ? 'true' : undefined}
       className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
     >
@@ -28,7 +30,8 @@ const SidebarItem = memo(({ item, isSelected, onSelect }: SidebarItemProps) => {
     prev.isSelected === next.isSelected &&
     prev.item.id === next.item.id &&
     prev.item.name === next.item.name &&
-    prev.onSelect === next.onSelect
+    prev.onSelect === next.onSelect &&
+    prev.index === next.index
   );
 });
 
@@ -46,10 +49,11 @@ interface SidebarListItemsProps {
 const SidebarListItems = memo(({ cases, selectedId, onSelect }: SidebarListItemsProps) => {
   return (
     <>
-      {cases.map(c => (
+      {cases.map((c, i) => (
         <li key={c.id} className="cv-auto">
           <SidebarItem
             item={c}
+            index={i}
             isSelected={selectedId === c.id}
             onSelect={onSelect}
           />
@@ -143,28 +147,40 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
 
     e.preventDefault();
-    const buttons = Array.from(listRef.current?.querySelectorAll('button') || []) as HTMLButtonElement[];
-    const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
 
-    // Fallback if focus is somehow lost but inside list area
-    if (currentIndex === -1 && buttons.length > 0) {
-      buttons[0].focus();
+    // Optimization: Use direct DOM access and data-index instead of querySelectorAll
+    // querySelectorAll is O(N) where N is list length. Accessing children by index is O(1).
+    // This improves keyboard navigation performance on large lists.
+    const activeEl = document.activeElement as HTMLElement;
+    const currentIndex = activeEl.hasAttribute('data-index')
+      ? parseInt(activeEl.getAttribute('data-index')!, 10)
+      : -1;
+
+    const totalItems = filteredCases.length;
+
+    // Fallback if focus is somehow lost but inside list area or not on a button
+    if (currentIndex === -1) {
+      const firstLi = listRef.current?.children[0];
+      const firstBtn = firstLi?.firstElementChild as HTMLElement;
+      firstBtn?.focus();
       return;
     }
 
     let nextIndex = currentIndex;
     if (e.key === 'ArrowDown') {
-      nextIndex = Math.min(currentIndex + 1, buttons.length - 1);
+      nextIndex = Math.min(currentIndex + 1, totalItems - 1);
     } else if (e.key === 'ArrowUp') {
       nextIndex = Math.max(currentIndex - 1, 0);
     } else if (e.key === 'Home') {
       nextIndex = 0;
     } else if (e.key === 'End') {
-      nextIndex = buttons.length - 1;
+      nextIndex = totalItems - 1;
     }
 
     if (nextIndex !== currentIndex) {
-      buttons[nextIndex]?.focus();
+      const nextLi = listRef.current?.children[nextIndex];
+      const nextBtn = nextLi?.firstElementChild as HTMLElement;
+      nextBtn?.focus();
     }
   };
 
