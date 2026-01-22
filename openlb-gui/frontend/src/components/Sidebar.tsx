@@ -46,8 +46,8 @@ interface SidebarListItemsProps {
 const SidebarListItems = memo(({ cases, selectedId, onSelect }: SidebarListItemsProps) => {
   return (
     <>
-      {cases.map(c => (
-        <li key={c.id} className="cv-auto">
+      {cases.map((c, index) => (
+        <li key={c.id} className="cv-auto" data-index={index}>
           <SidebarItem
             item={c}
             isSelected={selectedId === c.id}
@@ -141,30 +141,46 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
 
   const handleListKeyDown = (e: React.KeyboardEvent) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    if (!listRef.current) return;
 
     e.preventDefault();
-    const buttons = Array.from(listRef.current?.querySelectorAll('button') || []) as HTMLButtonElement[];
-    const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
 
-    // Fallback if focus is somehow lost but inside list area
-    if (currentIndex === -1 && buttons.length > 0) {
-      buttons[0].focus();
+    // Optimization: Use data-index and direct DOM access to avoid O(N) querySelectorAll
+    // This reduces the complexity of finding the current and next item from O(N) to O(1)
+    // which is crucial for smooth navigation in large lists.
+    const activeElement = document.activeElement as HTMLElement;
+    const currentLi = activeElement.closest('li');
+
+    // Verify we are inside the list
+    if (!currentLi || !listRef.current.contains(currentLi)) {
+      // Fallback: If focus is somehow lost or not on an item, select the first one
+      const firstButton = listRef.current.firstElementChild?.querySelector('button') as HTMLElement;
+      firstButton?.focus();
       return;
     }
 
+    const currentIndexStr = currentLi.getAttribute('data-index');
+    if (currentIndexStr === null) return;
+
+    const currentIndex = parseInt(currentIndexStr, 10);
+    const listSize = listRef.current.children.length;
+
     let nextIndex = currentIndex;
     if (e.key === 'ArrowDown') {
-      nextIndex = Math.min(currentIndex + 1, buttons.length - 1);
+      nextIndex = Math.min(currentIndex + 1, listSize - 1);
     } else if (e.key === 'ArrowUp') {
       nextIndex = Math.max(currentIndex - 1, 0);
     } else if (e.key === 'Home') {
       nextIndex = 0;
     } else if (e.key === 'End') {
-      nextIndex = buttons.length - 1;
+      nextIndex = listSize - 1;
     }
 
     if (nextIndex !== currentIndex) {
-      buttons[nextIndex]?.focus();
+      // Direct access to children is O(1)
+      const nextLi = listRef.current.children[nextIndex];
+      const nextButton = nextLi.querySelector('button') as HTMLElement;
+      nextButton?.focus();
     }
   };
 
