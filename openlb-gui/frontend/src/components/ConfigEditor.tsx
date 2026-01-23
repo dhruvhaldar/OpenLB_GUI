@@ -156,6 +156,9 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
               <Save size={14} />
             )}
             {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Failed' : isDirty ? 'Save*' : 'Save'}
+            {!['saved', 'error'].includes(saveStatus) && (
+              <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-black/20 rounded opacity-60 ml-1">Ctrl+S</kbd>
+            )}
           </button>
         </div>
       </div>
