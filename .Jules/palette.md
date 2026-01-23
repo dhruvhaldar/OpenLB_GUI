@@ -21,3 +21,7 @@
 ## 2025-05-25 - List Navigation Delegation
 **Learning:** Managing keyboard navigation (Arrow keys) for dynamic lists is cleanest when delegated to the container (`ul`) rather than individual items.
 **Action:** Attach `onKeyDown` to the parent container and use `document.activeElement` to determine the current focus index, simplifying state management and reducing event listeners.
+
+## 2025-05-26 - Visual Shortcut Consistency
+**Learning:** Adding visual keyboard shortcut hints (like `<kbd>`) to secondary action buttons (like Save) significantly improves feature discoverability and consistency when primary actions (Build, Run) already have them.
+**Action:** Ensure all keyboard-accessible action buttons display their shortcuts inline when in an idle state, using consistent styling (e.g., `bg-white/10` for dark themes).
