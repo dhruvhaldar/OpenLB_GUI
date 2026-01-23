@@ -70,7 +70,8 @@ class RateLimiter:
         dq.append(now)
         return False
 
-rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive actions
+write_rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for state-changing actions
+read_rate_limiter = RateLimiter(requests_per_minute=100) # 100 req/min/IP for read-only actions
 
 # Trusted Origins
 ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
@@ -168,20 +169,27 @@ app.add_middleware(TrustedOriginMiddleware, allowed_origins=ALLOWED_ORIGINS)
 # Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    # Rate Limiting for state-changing operations
+    # Rate Limiting
     # We apply this before processing the request
-    # Sentinel: Broadened scope to all state-changing methods to prevent bypasses and future oversight
+    # Sentinel: Apply distinct limits for Read (GET) and Write (POST/PUT/DELETE) operations.
+    client_ip = request.client.host if request.client else "unknown"
+    is_limited = False
+
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-        client_ip = request.client.host if request.client else "unknown"
-        if rate_limiter.is_rate_limited(client_ip):
-            logger.warning(f"Rate limit exceeded for {client_ip} on {request.url.path}")
-            # We return a JSON response directly for 429
-            # Note: We can't easily raise HTTPException in middleware, so we return Response
-            from fastapi.responses import JSONResponse
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "Too many requests. Please try again later."}
-            )
+        if write_rate_limiter.is_rate_limited(client_ip):
+            is_limited = True
+    elif request.method == "GET":
+        if read_rate_limiter.is_rate_limited(client_ip):
+            is_limited = True
+
+    if is_limited:
+        logger.warning(f"Rate limit exceeded for {client_ip} on {request.url.path} ({request.method})")
+        # We return a JSON response directly for 429
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests. Please try again later."}
+        )
 
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
