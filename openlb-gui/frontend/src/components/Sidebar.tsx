@@ -46,8 +46,8 @@ interface SidebarListItemsProps {
 const SidebarListItems = memo(({ cases, selectedId, onSelect }: SidebarListItemsProps) => {
   return (
     <>
-      {cases.map(c => (
-        <li key={c.id} className="cv-auto">
+      {cases.map((c, index) => (
+        <li key={c.id} className="cv-auto" data-index={index}>
           <SidebarItem
             item={c}
             isSelected={selectedId === c.id}
@@ -143,6 +143,45 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
 
     e.preventDefault();
+
+    // Optimization: O(1) navigation for case list
+    // Avoids O(N) querySelectorAll which causes layout thrashing on large lists
+    if (!isLoading && filteredCases.length > 0) {
+      const activeElement = document.activeElement as HTMLElement;
+      const activeLi = activeElement.closest('li');
+
+      // Default to -1 if we can't find the index (e.g. focus lost or external)
+      let currentIndex = -1;
+      if (activeLi && activeLi.dataset.index) {
+        currentIndex = parseInt(activeLi.dataset.index, 10);
+      }
+
+      let nextIndex = currentIndex;
+      const maxIndex = filteredCases.length - 1;
+
+      if (e.key === 'ArrowDown') {
+        nextIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, maxIndex);
+      } else if (e.key === 'ArrowUp') {
+        nextIndex = currentIndex === -1 ? maxIndex : Math.max(currentIndex - 1, 0);
+      } else if (e.key === 'Home') {
+        nextIndex = 0;
+      } else if (e.key === 'End') {
+        nextIndex = maxIndex;
+      }
+
+      if (nextIndex !== currentIndex && nextIndex >= 0 && listRef.current) {
+        // Direct O(1) DOM access using children collection
+        // listRef.current.children corresponds exactly to filteredCases when !isLoading
+        const targetLi = listRef.current.children[nextIndex] as HTMLElement;
+        if (targetLi) {
+          const targetButton = targetLi.firstElementChild as HTMLElement;
+          targetButton?.focus();
+        }
+      }
+      return;
+    }
+
+    // Fallback: O(N) navigation for other states (e.g. "Clear filter" button)
     const buttons = Array.from(listRef.current?.querySelectorAll('button') || []) as HTMLButtonElement[];
     const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
 
