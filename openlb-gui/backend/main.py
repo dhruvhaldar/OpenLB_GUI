@@ -249,6 +249,32 @@ RESERVED_WINDOWS_NAMES = {
     "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
 }
 
+# Performance Optimization: Optimized ignore filter for shutil.copytree
+# Replaces shutil.ignore_patterns which is O(N*M) where N=files, M=patterns.
+# This implementation is O(N) using set lookups and endswith tuple.
+class CaseIgnoreFilter:
+    def __init__(self):
+        self.extensions = (
+            ".o", ".obj", ".a", ".so", ".dll", ".exe",  # Build artifacts
+            ".vtk", ".vti", ".vtu", ".vtp", ".pvti", ".pvtu", # Simulation outputs
+            ".log", ".out", ".err",               # Logs from previous runs
+        )
+        self.exact_matches = {
+            "tmp", "__pycache__", ".git", ".DS_Store" # Temporary/System files
+        }
+
+    def __call__(self, path, names):
+        ignored = set()
+        for name in names:
+            if name in self.exact_matches:
+                ignored.add(name)
+            elif name.endswith(self.extensions):
+                ignored.add(name)
+        return ignored
+
+# Instantiate once to be used globally
+case_ignore_filter = CaseIgnoreFilter()
+
 # Allowed environment variables to pass to subprocesses
 SAFE_ENV_VARS = {
     'PATH', 'LANG', 'LC_ALL', 'TERM', 'LD_LIBRARY_PATH',
@@ -510,26 +536,17 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         raise HTTPException(status_code=409, detail="Case with this name already exists")
 
     try:
-        # Performance Optimization: explicit ignore patterns
-        # We define them here to avoid creating the ignore function on module load if not needed,
-        # though defining it globally is also fine.
-        ignore_func = shutil.ignore_patterns(
-            "*.o", "*.obj", "*.a", "*.so", "*.dll", "*.exe",  # Build artifacts
-            "*.vtk", "*.vti", "*.vtu", "*.vtp", "*.pvti", "*.pvtu", # Simulation outputs (can be GBs)
-            "*.log", "*.out", "*.err",               # Logs from previous runs
-            "tmp", "__pycache__", ".git", ".DS_Store" # Temporary/System files
-        )
-
         # Security Fix: Use symlinks=True to prevent dereferencing symlinks.
         # If symlinks=False (default), a symlink to /etc/passwd in the source would be copied
         # as the actual file content, leading to arbitrary file read / disclosure.
         # It also prevents infinite recursion if a symlink points to a parent directory.
         #
-        # Performance Optimization: Added ignore=ignore_func
+        # Performance Optimization: Added ignore=case_ignore_filter
         # This prevents copying massive simulation output files (VTK) and build artifacts (objects),
         # transforming an O(GB) operation into O(KB), making duplication nearly instantaneous
         # and saving significant disk space.
-        shutil.copytree(safe_source, target_path, symlinks=True, ignore=ignore_func)
+        # We use case_ignore_filter (O(N)) instead of shutil.ignore_patterns (O(N*M)) for speed.
+        shutil.copytree(safe_source, target_path, symlinks=True, ignore=case_ignore_filter)
         return {"success": True, "new_path": os.path.relpath(target_path, CASES_DIR)}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
