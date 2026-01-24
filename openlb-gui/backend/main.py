@@ -195,6 +195,10 @@ async def add_security_headers(request: Request, call_next):
     # - form-action 'self': Prevents form submission to external sites
     response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Sentinel Enhancement: Prevent Flash/PDF cross-domain requests
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    # Sentinel Enhancement: Isolate browsing context to prevent Spectre attacks
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     # Sentinel Enhancement: Strict Permissions Policy
     # Explicitly disable powerful browser features to reduce attack surface (Defense in Depth).
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=()"
