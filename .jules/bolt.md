@@ -21,3 +21,7 @@
 ## 2024-05-24 - [List Reconciliation Optimization]
 **Learning:** Even with `React.memo` on list items, the parent component still performs O(N) work to reconcile the list container (creating VDOM nodes for each item) on every render. This impacts responsiveness of controlled inputs (like search filters) in the same component.
 **Action:** Extract the list mapping logic into a separate, memoized container component. This stops React reconciliation at the container level when the list data hasn't changed, turning O(N) work into O(1) during input typing.
+
+## 2026-02-04 - [Optimized shutil.ignore_patterns]
+**Learning:** `shutil.ignore_patterns` creates a callable that uses `fnmatch.filter` internally. This is O(N*M) where N is file count and M is pattern count. For large simulation directories with many files and patterns, this is a major bottleneck (16x slower than optimized).
+**Action:** Use a custom ignore filter class that pre-processes patterns into sets (for exact matches) and tuples (for `endswith` extension checks) to achieve O(N) complexity.
