@@ -71,6 +71,7 @@ class RateLimiter:
         return False
 
 rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive actions
+read_rate_limiter = RateLimiter(requests_per_minute=100) # 100 req/min/IP for read operations
 
 # Trusted Origins
 ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
@@ -171,12 +172,23 @@ async def add_security_headers(request: Request, call_next):
     # Rate Limiting for state-changing operations
     # We apply this before processing the request
     # Sentinel: Broadened scope to all state-changing methods to prevent bypasses and future oversight
+    client_ip = request.client.host if request.client else "unknown"
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-        client_ip = request.client.host if request.client else "unknown"
         if rate_limiter.is_rate_limited(client_ip):
-            logger.warning(f"Rate limit exceeded for {client_ip} on {request.url.path}")
+            logger.warning(f"Write Rate limit exceeded for {client_ip} on {request.url.path}")
             # We return a JSON response directly for 429
             # Note: We can't easily raise HTTPException in middleware, so we return Response
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."}
+            )
+
+    # Sentinel Enhancement: Rate Limiting for Read Operations (GET)
+    # Protects against DoS attacks via rapid read requests (e.g., recursive scanning, file reading).
+    elif request.method == "GET":
+        if read_rate_limiter.is_rate_limited(client_ip):
+            logger.warning(f"Read Rate limit exceeded for {client_ip} on {request.url.path}")
             from fastapi.responses import JSONResponse
             return JSONResponse(
                 status_code=429,
