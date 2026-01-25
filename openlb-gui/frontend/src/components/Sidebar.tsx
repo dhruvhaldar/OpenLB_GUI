@@ -143,28 +143,40 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
 
     e.preventDefault();
-    const buttons = Array.from(listRef.current?.querySelectorAll('button') || []) as HTMLButtonElement[];
-    const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
 
-    // Fallback if focus is somehow lost but inside list area
-    if (currentIndex === -1 && buttons.length > 0) {
-      buttons[0].focus();
+    // Optimization: O(1) DOM traversal instead of O(N) querySelectorAll
+    // This significantly improves responsiveness on large lists.
+
+    if (e.key === 'Home') {
+      const firstButton = listRef.current?.firstElementChild?.querySelector('button');
+      (firstButton as HTMLElement)?.focus();
       return;
     }
 
-    let nextIndex = currentIndex;
-    if (e.key === 'ArrowDown') {
-      nextIndex = Math.min(currentIndex + 1, buttons.length - 1);
-    } else if (e.key === 'ArrowUp') {
-      nextIndex = Math.max(currentIndex - 1, 0);
-    } else if (e.key === 'Home') {
-      nextIndex = 0;
-    } else if (e.key === 'End') {
-      nextIndex = buttons.length - 1;
+    if (e.key === 'End') {
+      const lastButton = listRef.current?.lastElementChild?.querySelector('button');
+      (lastButton as HTMLElement)?.focus();
+      return;
     }
 
-    if (nextIndex !== currentIndex) {
-      buttons[nextIndex]?.focus();
+    const currentButton = document.activeElement as HTMLElement;
+    const currentLi = currentButton.closest('li');
+
+    if (!currentLi) {
+      // Fallback if focus is somehow lost but inside list area
+      const firstButton = listRef.current?.firstElementChild?.querySelector('button');
+      (firstButton as HTMLElement)?.focus();
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      const nextLi = currentLi.nextElementSibling;
+      const nextButton = nextLi?.querySelector('button');
+      (nextButton as HTMLElement)?.focus();
+    } else if (e.key === 'ArrowUp') {
+      const prevLi = currentLi.previousElementSibling;
+      const prevButton = prevLi?.querySelector('button');
+      (prevButton as HTMLElement)?.focus();
     }
   };
 

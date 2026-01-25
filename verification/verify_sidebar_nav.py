@@ -76,7 +76,8 @@ def run(playwright):
     if "Case 3" not in focused_text:
         print("WARNING: Last item not focused after End key (maybe not implemented yet)")
 
-    print("Verification Script Finished.")
+    page.screenshot(path="verification/sidebar_nav_verified.png")
+    print("Verification Script Finished. Screenshot saved.")
     browser.close()
 
 with sync_playwright() as playwright:
