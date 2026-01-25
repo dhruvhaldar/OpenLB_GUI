@@ -1,83 +1,92 @@
+from playwright.sync_api import sync_playwright, expect
+import json
 import time
-from playwright.sync_api import sync_playwright
 
-def run(playwright):
-    browser = playwright.chromium.launch(headless=True)
-    page = browser.new_page()
+def test_sidebar_navigation():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    # Mocking Backend for Cases
-    page.route("**/cases", lambda route: route.fulfill(
-        status=200,
-        content_type="application/json",
-        body='[{"id": "case1", "path": "case1", "name": "Case 1", "domain": "Test"}, ' +
-             '{"id": "case2", "path": "case2", "name": "Case 2", "domain": "Test"}, ' +
-             '{"id": "case3", "path": "case3", "name": "Case 3", "domain": "Test"}]'
-    ))
+        # Mock the /cases endpoint
+        cases = []
+        for i in range(1000):
+            cases.append({
+                "id": f"case-{i}",
+                "path": f"/path/to/case-{i}",
+                "name": f"case-{i}",
+                "domain": "TestDomain"
+            })
 
-    print("Connecting to frontend...")
-    try:
-        page.goto("http://localhost:4173")
-    except:
-        print("Failed to connect to localhost:4173. Trying 5173 (dev)...")
+        def handle_cases(route):
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(cases)
+            )
+
+        page.route("**/cases", handle_cases)
+        page.route("**/config?*", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"content": "config content"})))
+
+        # Navigate to the frontend
+        print("Navigating to frontend...")
         page.goto("http://localhost:5173")
 
-    page.wait_for_selector("text=OpenLB Manager")
+        # Wait for cases to load
+        print("Waiting for cases to load...")
+        page.wait_for_selector("text=case-0")
 
-    # Wait for cases to load
-    page.wait_for_selector("text=Case 1")
+        # Click the search input to reset focus context
+        print("Clicking search input...")
+        page.click("input[type='text']")
 
-    # 1. Focus Search Input
-    print("Focusing search input...")
-    page.click("input[placeholder*='Filter cases']")
+        # Press ArrowDown - should focus the first case (index 0)
+        print("Pressing ArrowDown (Focus 1st case)...")
+        page.keyboard.press("ArrowDown")
 
-    # 2. Press ArrowDown to focus first item (Existing feature)
-    print("Pressing ArrowDown to focus first item...")
-    page.keyboard.press("ArrowDown")
+        # Verify focus is on the first button
+        # We check active element's text content
+        active_text = page.evaluate("document.activeElement.textContent")
+        print(f"Active element text: {active_text}")
+        if "case-0" not in active_text:
+             print("FAIL: Expected focus on case-0")
+        else:
+             print("PASS: Focus on case-0")
 
-    # Check if first item is focused
-    focused_text = page.evaluate("document.activeElement.textContent")
-    print(f"Focused element text: {focused_text}")
+        # Press ArrowDown - should focus the second case (index 1)
+        print("Pressing ArrowDown (Focus 2nd case)...")
+        page.keyboard.press("ArrowDown")
 
-    if "Case 1" not in focused_text:
-        print("FAILED: First item not focused after ArrowDown from input")
-        exit(1)
+        active_text = page.evaluate("document.activeElement.textContent")
+        print(f"Active element text: {active_text}")
+        if "case-1" not in active_text:
+             print("FAIL: Expected focus on case-1")
+        else:
+             print("PASS: Focus on case-1")
 
-    # 3. Press ArrowDown to focus second item (NEW FEATURE)
-    print("Pressing ArrowDown to focus second item...")
-    page.keyboard.press("ArrowDown")
+        # Press End - should focus the last case (index 999)
+        print("Pressing End (Focus last case)...")
+        page.keyboard.press("End")
 
-    focused_text = page.evaluate("document.activeElement.textContent")
-    print(f"Focused element text: {focused_text}")
+        active_text = page.evaluate("document.activeElement.textContent")
+        print(f"Active element text: {active_text}")
+        if "case-999" not in active_text:
+             print("FAIL: Expected focus on case-999")
+        else:
+             print("PASS: Focus on case-999")
 
-    if "Case 2" not in focused_text:
-        print("FAILED: Second item not focused after ArrowDown")
-        # Don't exit yet, we want to see if the implementation fixes this
-        # But for now, this script is expected to fail on step 2 if feature not implemented
-        # Actually, without the feature, focus stays on Case 1.
+        # Press Home - should focus the first case
+        print("Pressing Home (Focus 1st case)...")
+        page.keyboard.press("Home")
 
-    # 4. Press ArrowUp to focus first item again
-    print("Pressing ArrowUp to focus first item...")
-    page.keyboard.press("ArrowUp")
+        active_text = page.evaluate("document.activeElement.textContent")
+        print(f"Active element text: {active_text}")
+        if "case-0" not in active_text:
+             print("FAIL: Expected focus on case-0")
+        else:
+             print("PASS: Focus on case-0")
 
-    focused_text = page.evaluate("document.activeElement.textContent")
-    print(f"Focused element text: {focused_text}")
+        page.screenshot(path="verification/verification.png")
+        browser.close()
 
-    if "Case 1" not in focused_text:
-        print("FAILED: First item not focused after ArrowUp")
-
-    # 5. Press End to focus last item
-    print("Pressing End to focus last item...")
-    page.keyboard.press("End")
-
-    focused_text = page.evaluate("document.activeElement.textContent")
-    print(f"Focused element text: {focused_text}")
-
-    # Depending on implementation 'End' might not be supported yet, but let's test if we add it
-    if "Case 3" not in focused_text:
-        print("WARNING: Last item not focused after End key (maybe not implemented yet)")
-
-    print("Verification Script Finished.")
-    browser.close()
-
-with sync_playwright() as playwright:
-    run(playwright)
+if __name__ == "__main__":
+    test_sidebar_navigation()
