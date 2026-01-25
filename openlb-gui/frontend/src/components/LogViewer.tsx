@@ -103,8 +103,11 @@ const LogViewer: React.FC<LogViewerProps> = ({ output, isWrapped = false, onRun,
                   onClick={onBuild}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded flex items-center gap-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                   aria-label="Build simulation"
+                  title="Build simulation (Ctrl+B)"
+                  aria-keyshortcuts="Control+B"
                 >
                   <Settings size={14} /> Build
+                  <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-black/20 rounded opacity-80">Ctrl+B</kbd>
                 </button>
               )}
               {onRun && (
@@ -112,8 +115,11 @@ const LogViewer: React.FC<LogViewerProps> = ({ output, isWrapped = false, onRun,
                   onClick={onRun}
                   className="px-4 py-2 bg-green-700 hover:bg-green-600 text-white rounded flex items-center gap-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
                   aria-label="Run simulation"
+                  title="Run simulation (Ctrl+Enter)"
+                  aria-keyshortcuts="Control+Enter"
                 >
                   <Play size={14} /> Run
+                  <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-black/20 rounded opacity-80">Ctrl+Enter</kbd>
                 </button>
               )}
             </div>
