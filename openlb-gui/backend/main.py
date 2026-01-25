@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator, Field
 import os
@@ -122,8 +123,6 @@ class StrictInputValidationMiddleware(BaseHTTPMiddleware):
         # Sentinel Enhancement: Secure by Default
         # Apply checks to all methods that can carry a body to prevent bypasses.
         if request.method in ["POST", "PUT", "PATCH"]:
-            from fastapi.responses import JSONResponse
-
             # Sentinel Enhancement: Enforce Content-Type to prevent CSRF via Simple Requests
             # HTML Forms cannot send application/json, so this prevents bypassing Preflight checks.
             # We enforce strict API usage: backend only speaks JSON.
@@ -137,7 +136,13 @@ class StrictInputValidationMiddleware(BaseHTTPMiddleware):
             if 'content-length' not in request.headers:
                  return JSONResponse(status_code=411, content={"detail": "Content-Length required"})
 
-            content_length = int(request.headers['content-length'])
+            try:
+                content_length = int(request.headers['content-length'])
+                if content_length < 0:
+                    raise ValueError("Negative Content-Length")
+            except ValueError:
+                return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length header"})
+
             if content_length > self.max_upload_size:
                 return JSONResponse(status_code=413, content={"detail": "Request body too large"})
         return await call_next(request)
@@ -178,7 +183,6 @@ async def add_security_headers(request: Request, call_next):
             logger.warning(f"Write Rate limit exceeded for {client_ip} on {request.url.path}")
             # We return a JSON response directly for 429
             # Note: We can't easily raise HTTPException in middleware, so we return Response
-            from fastapi.responses import JSONResponse
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."}
