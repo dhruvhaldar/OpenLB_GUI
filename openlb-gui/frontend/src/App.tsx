@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus, Eraser, WrapText } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus, Eraser, WrapText, RefreshCw, FolderPlus } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import LogViewer from './components/LogViewer';
@@ -538,6 +538,25 @@ function App() {
               </div>
             </div>
           </>
+        ) : !isLoadingCases && cases.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4 p-8">
+            <div className="p-4 bg-gray-800 rounded-full ring-1 ring-gray-700">
+              <FolderPlus size={48} className="text-blue-500" aria-hidden="true" />
+            </div>
+            <div className="text-center max-w-md">
+              <h3 className="text-lg font-medium text-gray-200">No Cases Found</h3>
+              <p className="text-sm mt-2 text-gray-400 leading-relaxed">
+                Your case library is empty. To get started, add your OpenLB simulation directories to the <code className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300 font-mono text-xs border border-gray-700">my_cases/</code> folder.
+              </p>
+              <button
+                onClick={refreshCases}
+                className="mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 mx-auto focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
+              >
+                <RefreshCw size={16} />
+                Refresh Cases
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
             <div className="p-4 bg-gray-800 rounded-full">
