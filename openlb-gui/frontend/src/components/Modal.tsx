@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useId } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -10,6 +10,7 @@ interface ModalProps {
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -42,9 +43,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
       className="bg-gray-800 text-white rounded-lg shadow-xl p-0 backdrop:bg-black/50 backdrop:backdrop-blur-sm border border-gray-700 w-full max-w-md"
       onCancel={handleCancel}
       onClick={handleClick}
+      aria-labelledby={titleId}
     >
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <h3 className="font-semibold text-lg">{title}</h3>
+        <h3 id={titleId} className="font-semibold text-lg">{title}</h3>
         <button
             onClick={onClose}
             className="text-gray-400 hover:text-white rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 p-1"

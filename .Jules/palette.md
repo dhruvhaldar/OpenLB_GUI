@@ -25,3 +25,7 @@
 ## 2025-05-26 - Visual Shortcut Consistency
 **Learning:** Adding visual keyboard shortcut hints (like `<kbd>`) to secondary action buttons (like Save) significantly improves feature discoverability and consistency when primary actions (Build, Run) already have them.
 **Action:** Ensure all keyboard-accessible action buttons display their shortcuts inline when in an idle state, using consistent styling (e.g., `bg-white/10` for dark themes).
+
+## 2025-05-27 - Dialog Accessibility Labeling
+**Learning:** Native `<dialog>` elements do not automatically announce their heading content to screen readers upon opening.
+**Action:** Always link the dialog container to its title using `aria-labelledby` and a unique ID (via `useId()`) to ensure the context is announced immediately.
