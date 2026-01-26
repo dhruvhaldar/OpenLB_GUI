@@ -671,6 +671,12 @@ def list_cases():
                     continue
     except FileNotFoundError:
         pass
+
+    # Performance Optimization: Sort cases by domain and name.
+    # This ensures deterministic order (O(N log N)) regardless of filesystem order.
+    # It allows the frontend to use efficient O(N) sequential comparison instead of O(N) Map lookups.
+    cases.sort(key=lambda x: (x['domain'], x['name']))
+
     return cases
 
 @app.post("/build")
