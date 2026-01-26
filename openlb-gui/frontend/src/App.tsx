@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus, Eraser, WrapText } from 'lucide-react';
+import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus, Eraser, WrapText, FolderPlus, RefreshCw } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
 import LogViewer from './components/LogViewer';
@@ -538,6 +538,30 @@ function App() {
               </div>
             </div>
           </>
+        ) : isLoadingCases ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
+            <Loader2 size={48} className="text-blue-500 animate-spin" aria-hidden="true" />
+            <p className="text-gray-400 font-medium">Loading cases...</p>
+          </div>
+        ) : cases.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
+            <div className="p-4 bg-gray-800 rounded-full">
+              <FolderPlus size={48} className="text-gray-600" aria-hidden="true" />
+            </div>
+            <div className="text-center max-w-sm px-4">
+              <h3 className="text-lg font-medium text-gray-300">No Simulation Cases Found</h3>
+              <p className="text-sm mt-1 text-gray-400 mb-6">
+                Add case folders to the <code className="bg-gray-800 px-1 py-0.5 rounded text-gray-300">my_cases</code> directory to get started.
+              </p>
+              <button
+                onClick={refreshCases}
+                className="mx-auto px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-2 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+              >
+                <RefreshCw size={16} />
+                Refresh Cases
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
             <div className="p-4 bg-gray-800 rounded-full">

@@ -29,3 +29,7 @@
 ## 2025-05-27 - Dialog Accessibility Labeling
 **Learning:** Native `<dialog>` elements do not automatically announce their heading content to screen readers upon opening.
 **Action:** Always link the dialog container to its title using `aria-labelledby` and a unique ID (via `useId()`) to ensure the context is announced immediately.
+
+## 2025-05-28 - Zero Data Empty State
+**Learning:** Distinguishing between 'No Data' (Zero State) and 'No Selection' is crucial. 'No Selection' implies data exists but isn't active, while 'No Data' requires onboarding/creation guidance.
+**Action:** Implement distinct empty states for 'No Items Found' (with creation/refresh actions) vs 'No Item Selected' (with navigation hints).
