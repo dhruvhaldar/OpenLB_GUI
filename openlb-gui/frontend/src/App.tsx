@@ -58,28 +58,23 @@ function App() {
   // Optimization: Deep comparison helper for cases
   // Prevents unnecessary React.memo re-calculations in Sidebar and layout thrashing
   // when the fetched case list is identical to the current state.
-  // UPDATE: Replaced JSON.stringify with a Map-based comparison.
-  // This provides two benefits:
-  // 1. Performance: Avoids O(N) string serialization and allocation.
-  // 2. Stability: Ignores order differences. If the backend returns the same cases
-  //    in a different order (common with os.scandir), we treat it as "equal"
-  //    and preserve the current frontend order, preventing UI jumps.
+  // UPDATE: Simplified to O(N) sequential comparison.
+  // The backend now guarantees sorted output (by domain/name), so we can assume
+  // that if the lists are equal, they must be in the same order.
+  // This removes the O(N) Map allocation/lookup overhead.
   const areCasesEqual = useCallback((prev: Case[], next: Case[]) => {
     if (prev === next) return true;
     if (prev.length !== next.length) return false;
 
-    // Optimization: Create a Map of the previous cases for O(1) lookup
-    const prevMap = new Map(prev.map(c => [c.id, c]));
+    for (let i = 0; i < prev.length; i++) {
+      const p = prev[i];
+      const n = next[i];
 
-    for (const nextItem of next) {
-      const prevItem = prevMap.get(nextItem.id);
-      if (!prevItem) return false;
-
-      // Check for content changes
       if (
-        prevItem.name !== nextItem.name ||
-        prevItem.domain !== nextItem.domain ||
-        prevItem.path !== nextItem.path
+        p.id !== n.id ||
+        p.name !== n.name ||
+        p.domain !== n.domain ||
+        p.path !== n.path
       ) {
         return false;
       }
