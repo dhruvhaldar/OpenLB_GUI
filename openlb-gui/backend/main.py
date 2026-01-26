@@ -470,6 +470,49 @@ class DuplicateRequest(BaseModel):
     source_path: str = Field(..., max_length=4096)
     new_name: str = Field(..., max_length=255)
 
+# Performance Optimization: Optimized ignore patterns for duplication
+# Pre-defined list of patterns to ignore during case duplication.
+DUPLICATE_IGNORE_PATTERNS = (
+    "*.o", "*.obj", "*.a", "*.so", "*.dll", "*.exe",  # Build artifacts
+    "*.vtk", "*.vti", "*.vtu", "*.vtp", "*.pvti", "*.pvtu", # Simulation outputs (can be GBs)
+    "*.log", "*.out", "*.err",               # Logs from previous runs
+    "tmp", "__pycache__", ".git", ".DS_Store" # Temporary/System files
+)
+
+class CaseIgnoreFilter:
+    """
+    Optimized ignore filter for shutil.copytree.
+    Replaces shutil.ignore_patterns which is O(N*M) where N is files and M is patterns.
+    This implementation uses O(1) set lookup and O(1) tuple suffix check.
+    """
+    def __init__(self, patterns):
+        # Normalize patterns for the OS
+        self.extensions = tuple(p[1:] for p in patterns if p.startswith('*.'))
+        self.exact_matches = set(p for p in patterns if '*' not in p)
+
+        # On Windows, we need case-insensitive matching
+        self.is_windows = os.name == 'nt'
+        if self.is_windows:
+             self.extensions = tuple(e.lower() for e in self.extensions)
+             self.exact_matches = set(e.lower() for e in self.exact_matches)
+
+    def __call__(self, path, names):
+        ignored = set()
+        for name in names:
+             # Fast path: check exact match first
+             check_name = name.lower() if self.is_windows else name
+             if check_name in self.exact_matches:
+                 ignored.add(name)
+                 continue
+
+             # Check extensions
+             if check_name.endswith(self.extensions):
+                 ignored.add(name)
+        return ignored
+
+# Instantiate once to avoid overhead on every request
+case_ignore_filter = CaseIgnoreFilter(DUPLICATE_IGNORE_PATTERNS)
+
 class ConfigRequest(BaseModel):
     case_path: str = Field(..., max_length=4096)
     content: str
@@ -526,26 +569,16 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         raise HTTPException(status_code=409, detail="Case with this name already exists")
 
     try:
-        # Performance Optimization: explicit ignore patterns
-        # We define them here to avoid creating the ignore function on module load if not needed,
-        # though defining it globally is also fine.
-        ignore_func = shutil.ignore_patterns(
-            "*.o", "*.obj", "*.a", "*.so", "*.dll", "*.exe",  # Build artifacts
-            "*.vtk", "*.vti", "*.vtu", "*.vtp", "*.pvti", "*.pvtu", # Simulation outputs (can be GBs)
-            "*.log", "*.out", "*.err",               # Logs from previous runs
-            "tmp", "__pycache__", ".git", ".DS_Store" # Temporary/System files
-        )
-
         # Security Fix: Use symlinks=True to prevent dereferencing symlinks.
         # If symlinks=False (default), a symlink to /etc/passwd in the source would be copied
         # as the actual file content, leading to arbitrary file read / disclosure.
         # It also prevents infinite recursion if a symlink points to a parent directory.
         #
-        # Performance Optimization: Added ignore=ignore_func
-        # This prevents copying massive simulation output files (VTK) and build artifacts (objects),
-        # transforming an O(GB) operation into O(KB), making duplication nearly instantaneous
-        # and saving significant disk space.
-        shutil.copytree(safe_source, target_path, symlinks=True, ignore=ignore_func)
+        # Performance Optimization: Use optimized case_ignore_filter (O(N))
+        # This replaces shutil.ignore_patterns (O(N*M)) to efficiently exclude massive simulation
+        # output files (VTK) and build artifacts (objects).
+        # This transforms an O(GB) copy operation into O(KB), making duplication nearly instantaneous.
+        shutil.copytree(safe_source, target_path, symlinks=True, ignore=case_ignore_filter)
         return {"success": True, "new_path": os.path.relpath(target_path, CASES_DIR)}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")

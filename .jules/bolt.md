@@ -25,3 +25,7 @@
 ## 2026-01-25 - [O(1) DOM List Navigation]
 **Learning:** Using `querySelectorAll` in keyboard event handlers forces the browser to scan the entire subtree on every keypress, creating O(N) latency that is noticeable in large lists.
 **Action:** Replace subtree queries with O(1) DOM traversal properties like `closest`, `nextElementSibling`, and `previousElementSibling` for keyboard navigation in virtual or long lists.
+
+## 2026-02-06 - [Optimized Recursive Filtering]
+**Learning:** `shutil.ignore_patterns` creates a closure that recompiles regex patterns and iterates `fnmatch.filter` (O(M)) for every directory visited, resulting in O(N*M) complexity where N is file count and M is pattern count.
+**Action:** Replace `shutil.ignore_patterns` with a custom callable class that uses `set` lookup (O(1)) for exact matches and `tuple.endswith` (optimized C implementation) for extensions, ensuring O(N) filtering performance during directory tree copying.
