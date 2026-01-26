@@ -489,6 +489,24 @@ class ConfigRequest(BaseModel):
 
         return v
 
+def safe_copy(src, dst, **kwargs):
+    """
+    Custom copy function for shutil.copytree to prevent copying special files
+    (FIFOs, Sockets, Devices) which can cause errors or blocking.
+    """
+    try:
+        # Check file type. os.lstat is used to check the file itself.
+        st = os.lstat(src)
+        if stat.S_ISFIFO(st.st_mode) or stat.S_ISSOCK(st.st_mode) or \
+           stat.S_ISCHR(st.st_mode) or stat.S_ISBLK(st.st_mode):
+            logger.warning(f"Skipping special file during duplicate: {src}")
+            return
+
+        # Standard copy for regular files
+        shutil.copy2(src, dst, **kwargs)
+    except OSError as e:
+        logger.warning(f"Failed to check/copy file {src}: {e}")
+
 @app.post("/cases/duplicate")
 def duplicate_case(req: DuplicateRequest, request: Request):
     """Duplicates an existing case."""
@@ -545,7 +563,10 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         # This prevents copying massive simulation output files (VTK) and build artifacts (objects),
         # transforming an O(GB) operation into O(KB), making duplication nearly instantaneous
         # and saving significant disk space.
-        shutil.copytree(safe_source, target_path, symlinks=True, ignore=ignore_func)
+        #
+        # Sentinel Enhancement: Use copy_function=safe_copy to skip special files (FIFOs, Sockets)
+        # that would otherwise cause shutil.Error (failing the operation) or potential hangs.
+        shutil.copytree(safe_source, target_path, symlinks=True, ignore=ignore_func, copy_function=safe_copy)
         return {"success": True, "new_path": os.path.relpath(target_path, CASES_DIR)}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
