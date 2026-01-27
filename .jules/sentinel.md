@@ -20,6 +20,11 @@
 **Learning:** High-level file operations in Python like `shutil.copytree` do not offer transactional guarantees. In critical systems where filesystem state integrity is important, one must implement manual rollback mechanisms (cleanup) in `except` blocks.
 **Prevention:** Wrapped `shutil.copytree` in a try-except block that explicitly checks for the existence of the target directory on failure and removes it using `shutil.rmtree`. This ensures the operation is "all-or-nothing" regarding the directory's existence.
 
+## 2026-01-27 - Incomplete Control Character Sanitization
+**Vulnerability:** The `CONTROL_CHARS` regex (`[\x00-\x1f]`) intended to block control characters for log injection prevention failed to include the Delete character (`\x7f` or `DEL`). This oversight could allow attackers to inject `DEL` characters into logs, potentially enabling visual spoofing or obfuscation in terminal viewers.
+**Learning:** Standard ASCII control character ranges are often defined as `0x00-0x1F` (C0 controls), but `0x7F` (DEL) is also a control character. Regex character ranges like `\x00-\x1f` are inclusive but do not automatically wrap to include `\x7f` unless explicitly added.
+**Prevention:** When sanitizing input for "printable" ASCII, explicitly include `\x7f` in the blacklist or use a whitelist of allowed printable characters (e.g., `^[ -~]+$`). Updated the regex to `[\x00-\x1f\x7f]`.
+
 ## 2026-02-12 - CSP Directive Inheritance Gaps
 **Vulnerability:** The application defined a `Content-Security-Policy` with `default-src 'self'`. While this restricts many resource types, several critical directives (`base-uri`, `form-action`, `frame-ancestors`) do *not* inherit from `default-src`. Omitting them leaves the application vulnerable to `<base>` tag hijacking (rebasing relative URLs to an attacker's domain) and unauthorized form submissions.
 **Learning:** CSP inheritance rules are complex. Developers often assume `default-src` covers everything, but it only covers "fetch directives". "Navigation directives" (`form-action`) and "Document directives" (`base-uri`) must be explicitly defined. A weak policy can be as dangerous as no policy if it creates a false sense of security.
