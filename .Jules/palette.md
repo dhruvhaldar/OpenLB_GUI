@@ -29,3 +29,7 @@
 ## 2025-05-27 - Dialog Accessibility Labeling
 **Learning:** Native `<dialog>` elements do not automatically announce their heading content to screen readers upon opening.
 **Action:** Always link the dialog container to its title using `aria-labelledby` and a unique ID (via `useId()`) to ensure the context is announced immediately.
+
+## 2025-05-28 - List Count Visibility
+**Learning:** When filtering lists (like search results), users need immediate feedback on the result set size relative to the total.
+**Action:** Add a subtle counter (e.g., "Filtered/Total") to the section header of list components to provide context without cluttering the UI.
