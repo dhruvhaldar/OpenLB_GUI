@@ -234,7 +234,12 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
             )}
           </div>
           <div>
-            <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Cases</h2>
+            <div className="flex justify-between items-baseline mb-1">
+              <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
+              <span className="text-[10px] text-gray-500 font-mono" aria-label={`${filteredCases.length} of ${cases.length} cases shown`}>
+                {filteredCases.length}/{cases.length}
+              </span>
+            </div>
             <ul
               ref={listRef}
               className="space-y-1"
