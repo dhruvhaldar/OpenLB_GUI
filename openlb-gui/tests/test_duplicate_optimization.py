@@ -74,3 +74,55 @@ def test_duplicate_case_excludes_artifacts(temp_cases_dir):
 
         # Directories are copied recursively, but we might want to exclude tmp dirs too
         # For now, let's focus on file extensions.
+
+def test_fast_ignore_patterns_logic():
+    """
+    Unit test for fast_ignore_patterns logic, ensuring it matches expectations.
+    """
+    from backend.main import fast_ignore_patterns
+
+    path = "/any/path"
+
+    # Test Mixed Files
+    files = [
+        "keep_me.cpp", "keep_me.h",
+        "trash.o", "garbage.obj", "result.vtk", "log.out",
+        "tmp", ".git", "normal_folder"
+    ]
+
+    ignored = fast_ignore_patterns(path, files)
+
+    expected_ignored = {
+        "trash.o", "garbage.obj", "result.vtk", "log.out",
+        "tmp", ".git"
+    }
+
+    assert ignored == expected_ignored
+    assert "keep_me.cpp" not in ignored
+    assert "normal_folder" not in ignored
+
+    # Test Case Sensitivity (Mocking OS behavior)
+    # If we are on Linux (likely), names are case sensitive.
+    # But if we force mock os.name to 'nt', it should ignore case.
+
+    with patch("os.name", "nt"):
+        # On Windows, "FILE.O" matches "*.o"
+        files_win = ["FILE.O", "Data.VTK", "TMP", "Keep.CPP"]
+        ignored_win = fast_ignore_patterns(path, files_win)
+
+        assert "FILE.O" in ignored_win
+        assert "Data.VTK" in ignored_win
+        assert "TMP" in ignored_win
+        assert "Keep.CPP" not in ignored_win
+
+    with patch("os.name", "posix"):
+        # On Posix, "FILE.O" usually DOES NOT match "*.o" (fnmatch behavior)
+        # However, my implementation currently does NOT lowercase on Posix.
+        # So it should be case-sensitive.
+        files_nix = ["FILE.O", "Data.VTK", "TMP", "file.o"]
+        ignored_nix = fast_ignore_patterns(path, files_nix)
+
+        assert "file.o" in ignored_nix
+        assert "FILE.O" not in ignored_nix
+        assert "Data.VTK" not in ignored_nix
+        assert "TMP" not in ignored_nix
