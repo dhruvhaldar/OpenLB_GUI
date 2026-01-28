@@ -565,6 +565,11 @@ function App() {
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-300">No Case Selected</h3>
               <p className="text-sm mt-1 text-gray-400">Select a simulation case from the sidebar to begin.</p>
+              <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-500">
+                <span>Press</span>
+                <kbd className="min-w-[20px] inline-flex justify-center items-center h-5 text-[10px] font-mono font-medium bg-gray-800 text-gray-400 border border-gray-700 rounded shadow-sm">/</kbd>
+                <span>to search cases</span>
+              </div>
             </div>
           </div>
         )}

@@ -33,3 +33,7 @@
 ## 2025-05-28 - List Count Visibility
 **Learning:** Users often need immediate feedback on the scale of data or filter results. "Cases" alone is ambiguous; "Cases (10)" or "Cases (1/10)" provides crucial context.
 **Action:** Append count badges to section headers for dynamic lists, using the format "(X/Y)" when filtered to show the relationship between the subset and the whole.
+
+## 2025-05-29 - Empty State Keyboard Hints
+**Learning:** Empty states are valuable real estate for teaching keyboard shortcuts that would otherwise be hidden.
+**Action:** Use empty content areas to display prominent keyboard shortcut hints for initiating the primary workflow (e.g. search).
