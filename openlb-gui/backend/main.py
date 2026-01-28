@@ -272,6 +272,45 @@ RESERVED_WINDOWS_NAMES = {
     "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
 }
 
+# Bolt Performance Optimization: Pre-defined ignore sets
+# Using sets and tuples for O(1) lookups instead of O(N*M) fnmatch/regex patterns
+IGNORED_EXTENSIONS = (
+    ".o", ".obj", ".a", ".so", ".dll", ".exe",  # Build artifacts
+    ".vtk", ".vti", ".vtu", ".vtp", ".pvti", ".pvtu", # Simulation outputs
+    ".log", ".out", ".err"               # Logs
+)
+IGNORED_DIRS = {
+    "tmp", "__pycache__", ".git", ".DS_Store" # Temporary/System files
+}
+
+# Pre-compute lowercase versions for Windows case-insensitivity
+if os.name == 'nt':
+    IGNORED_EXTENSIONS = tuple(ext.lower() for ext in IGNORED_EXTENSIONS)
+    IGNORED_DIRS = {name.lower() for name in IGNORED_DIRS}
+
+def fast_ignore_patterns(path, names):
+    """
+    Optimized ignore callback for shutil.copytree.
+    Reduces complexity from O(N*P) (fnmatch) to O(N) (set/endswith).
+    """
+    ignored = set()
+    # On Windows, we need to compare case-insensitively
+    is_windows = os.name == 'nt'
+
+    for name in names:
+        check_name = name
+        if is_windows:
+            check_name = name.lower()
+
+        if check_name in IGNORED_DIRS:
+            ignored.add(name)
+            continue
+
+        if check_name.endswith(IGNORED_EXTENSIONS):
+            ignored.add(name)
+
+    return ignored
+
 # Allowed environment variables to pass to subprocesses
 SAFE_ENV_VARS = {
     'PATH', 'LANG', 'LC_ALL', 'TERM', 'LD_LIBRARY_PATH',
@@ -551,29 +590,22 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         raise HTTPException(status_code=409, detail="Case with this name already exists")
 
     try:
-        # Performance Optimization: explicit ignore patterns
-        # We define them here to avoid creating the ignore function on module load if not needed,
-        # though defining it globally is also fine.
-        ignore_func = shutil.ignore_patterns(
-            "*.o", "*.obj", "*.a", "*.so", "*.dll", "*.exe",  # Build artifacts
-            "*.vtk", "*.vti", "*.vtu", "*.vtp", "*.pvti", "*.pvtu", # Simulation outputs (can be GBs)
-            "*.log", "*.out", "*.err",               # Logs from previous runs
-            "tmp", "__pycache__", ".git", ".DS_Store" # Temporary/System files
-        )
-
         # Security Fix: Use symlinks=True to prevent dereferencing symlinks.
         # If symlinks=False (default), a symlink to /etc/passwd in the source would be copied
         # as the actual file content, leading to arbitrary file read / disclosure.
         # It also prevents infinite recursion if a symlink points to a parent directory.
         #
-        # Performance Optimization: Added ignore=ignore_func
+        # Performance Optimization: Added ignore=fast_ignore_patterns
         # This prevents copying massive simulation output files (VTK) and build artifacts (objects),
         # transforming an O(GB) operation into O(KB), making duplication nearly instantaneous
         # and saving significant disk space.
         #
+        # Bolt Optimization: Replaced shutil.ignore_patterns (O(N*M)) with fast_ignore_patterns (O(N))
+        # This speeds up directory traversal significantly when thousands of files exist.
+        #
         # Sentinel Enhancement: Use copy_function=safe_copy to skip special files (FIFOs, Sockets)
         # that would otherwise cause shutil.Error (failing the operation) or potential hangs.
-        shutil.copytree(safe_source, target_path, symlinks=True, ignore=ignore_func, copy_function=safe_copy)
+        shutil.copytree(safe_source, target_path, symlinks=True, ignore=fast_ignore_patterns, copy_function=safe_copy)
         return {"success": True, "new_path": os.path.relpath(target_path, CASES_DIR)}
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
