@@ -248,8 +248,8 @@ execution_lock = threading.Lock()
 
 # Pre-compile regex for control characters optimization
 # Matches any char < 32 (0x20) INCLUDING tab (0x09)
-# Security Fix: Rejecting tabs prevents Log Injection (CWE-117) and visual spoofing.
-CONTROL_CHARS = re.compile(r'[\x00-\x1f]')
+# Security Fix: Rejecting tabs and DEL (0x7f) prevents Log Injection (CWE-117) and visual spoofing.
+CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
 
 # Pre-compile Regex for hidden path check optimization
 # Matches a dot at the beginning of a string or immediately after a separator

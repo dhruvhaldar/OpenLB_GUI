@@ -36,3 +36,19 @@ def test_log_injection_prevention(caplog):
     # Verify we actually logged the attempt safely
     # Check for the warning with the escaped string
     assert any("Invalid characters in path" in r.message and "\\n" in r.message for r in caplog.records)
+
+def test_del_injection_prevention(caplog):
+    """
+    Verifies that paths with DEL characters (\x7f) are rejected
+    and do not cause log injection.
+    """
+    # Payload with a DEL character
+    malicious_path = "my_cases/legit_case\x7fINJECTED"
+
+    # We expect a 400 Bad Request
+    response = client.post("/build", json={"case_path": malicious_path})
+    assert response.status_code == 400
+    assert "Invalid characters in path" in response.json()['detail']
+
+    # Verify we logged the attempt safely (using repr, so \x7f should show up as escaped)
+    assert any("Invalid characters in path" in r.message and "\\x7f" in r.message for r in caplog.records)
