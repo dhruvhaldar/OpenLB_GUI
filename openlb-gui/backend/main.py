@@ -221,6 +221,8 @@ async def add_security_headers(request: Request, call_next):
     # Sentinel Enhancement: Strict Permissions Policy
     # Explicitly disable powerful browser features to reduce attack surface (Defense in Depth).
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=()"
+    # Sentinel Enhancement: Prevent leaking resources to other origins (e.g. Spectre)
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     # Sentinel Enhancement: Prevent caching of sensitive data (config, logs)
     # The 'no-store' directive prevents browsers and intermediate proxies from storing
     # any version of the response, forcing a fresh fetch every time.
@@ -247,9 +249,9 @@ CASES_DIR_WITH_SEP = os.path.join(CASES_DIR, "")
 execution_lock = threading.Lock()
 
 # Pre-compile regex for control characters optimization
-# Matches any char < 32 (0x20) INCLUDING tab (0x09)
-# Security Fix: Rejecting tabs prevents Log Injection (CWE-117) and visual spoofing.
-CONTROL_CHARS = re.compile(r'[\x00-\x1f]')
+# Matches any char < 32 (0x20) AND the Delete char (0x7f)
+# Security Fix: Rejecting tabs and DEL prevents Log Injection (CWE-117) and visual spoofing.
+CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
 
 # Pre-compile Regex for hidden path check optimization
 # Matches a dot at the beginning of a string or immediately after a separator
