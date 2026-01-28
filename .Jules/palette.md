@@ -29,3 +29,7 @@
 ## 2025-05-27 - Dialog Accessibility Labeling
 **Learning:** Native `<dialog>` elements do not automatically announce their heading content to screen readers upon opening.
 **Action:** Always link the dialog container to its title using `aria-labelledby` and a unique ID (via `useId()`) to ensure the context is announced immediately.
+
+## 2025-05-28 - List Count Visibility
+**Learning:** Users often need immediate feedback on the scale of data or filter results. "Cases" alone is ambiguous; "Cases (10)" or "Cases (1/10)" provides crucial context.
+**Action:** Append count badges to section headers for dynamic lists, using the format "(X/Y)" when filtered to show the relationship between the subset and the whole.
