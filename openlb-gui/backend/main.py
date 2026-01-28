@@ -218,6 +218,9 @@ async def add_security_headers(request: Request, call_next):
     # Prevents XS-Leaks and Spectre attacks by ensuring this window runs in a separate process group
     # and cannot be scripted by other origins.
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    # Sentinel Enhancement: Prevent resource embedding by other origins
+    # Defense in Depth against side-channel attacks and unauthorized usage.
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     # Sentinel Enhancement: Strict Permissions Policy
     # Explicitly disable powerful browser features to reduce attack surface (Defense in Depth).
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=()"
