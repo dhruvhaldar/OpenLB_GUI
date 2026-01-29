@@ -541,7 +541,8 @@ function App() {
               </div>
             </div>
           </>
-        ) : isLoadingCases ? (
+        {/* Bolt Optimization: Only show loading screen on initial load to prevent flashing during refresh. */}
+        ) : isLoadingCases && cases.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
             <Loader2 size={48} className="animate-spin text-blue-500" aria-hidden="true" />
             <h3 className="text-lg font-medium text-gray-300">Loading Cases...</h3>

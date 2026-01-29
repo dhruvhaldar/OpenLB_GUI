@@ -195,7 +195,6 @@ async def add_security_headers(request: Request, call_next):
     elif request.method == "GET":
         if read_rate_limiter.is_rate_limited(client_ip):
             logger.warning(f"Read Rate limit exceeded for {client_ip} on {request.url.path}")
-            from fastapi.responses import JSONResponse
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."}
