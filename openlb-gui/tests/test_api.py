@@ -94,7 +94,7 @@ def test_duplicate_delete_case():
         "new_name": new_name
     })
     assert res_dup.status_code == 200
-    new_path = res_dup.json()['new_path']
+    new_path = res_dup.json()['case']['path']
     assert new_name in new_path
 
     # 3. Verify it exists in list
