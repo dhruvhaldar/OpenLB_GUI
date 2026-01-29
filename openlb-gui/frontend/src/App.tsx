@@ -298,21 +298,24 @@ function App() {
         return;
       }
       const data = await res.json();
-      // Refresh cases
-      const casesRes = await fetch(`${API_URL}/cases`);
-      const casesData = await casesRes.json();
 
-      // Optimization: Avoid state update if data is identical (though unlikely for duplicate)
+      // Bolt Optimization: Update state locally instead of re-fetching all cases
+      // This saves a potentially expensive directory scan on the backend (O(Filesystem))
+      const newCase = data.case;
       setCases(prev => {
-        if (areCasesEqual(prev, casesData)) return prev;
-        return casesData;
+        const next = [...prev, newCase];
+        // Maintain sort order: Domain (asc), then Name (asc) to match backend list_cases
+        next.sort((a, b) => {
+          if (a.domain < b.domain) return -1;
+          if (a.domain > b.domain) return 1;
+          if (a.name < b.name) return -1;
+          if (a.name > b.name) return 1;
+          return 0;
+        });
+        return next;
       });
 
-      // Select the new case
-      const newCase = casesData.find((c: Case) => c.path === data.new_path);
-      if (newCase) {
-        handleSelectCase(newCase);
-      }
+      handleSelectCase(newCase);
       setIsDuplicateModalOpen(false);
     } catch (e) {
       console.error('Duplicate failed', e);
@@ -320,7 +323,7 @@ function App() {
     } finally {
       setIsDuplicating(false);
     }
-  }, [selectedCase, duplicateName, handleSelectCase, areCasesEqual]);
+  }, [selectedCase, duplicateName, handleSelectCase]);
 
   const handleDeleteClick = useCallback(() => {
     if (!selectedCase) return;

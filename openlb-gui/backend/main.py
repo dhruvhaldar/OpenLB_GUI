@@ -611,7 +611,24 @@ def duplicate_case(req: DuplicateRequest, request: Request):
         # Sentinel Enhancement: Use copy_function=safe_copy to skip special files (FIFOs, Sockets)
         # that would otherwise cause shutil.Error (failing the operation) or potential hangs.
         shutil.copytree(safe_source, target_path, symlinks=True, ignore=fast_ignore_patterns, copy_function=safe_copy)
-        return {"success": True, "new_path": os.path.relpath(target_path, CASES_DIR)}
+
+        # Bolt Optimization: Return full case object to avoid frontend re-fetch
+        # Calculate domain based on parent directory (Level 1 vs Level 2)
+        domain = "Uncategorized"
+        if parent_dir != CASES_DIR:
+            domain = os.path.basename(parent_dir)
+
+        new_rel_path = os.path.relpath(target_path, CASES_DIR)
+
+        return {
+            "success": True,
+            "case": {
+                "id": new_rel_path,
+                "path": new_rel_path,
+                "name": req.new_name,
+                "domain": domain
+            }
+        }
     except Exception as e:
         logger.error(f"Duplicate failed: {e}")
 
