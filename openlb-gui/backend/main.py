@@ -171,6 +171,8 @@ app.add_middleware(
 # Apply TrustedOriginMiddleware
 app.add_middleware(TrustedOriginMiddleware, allowed_origins=ALLOWED_ORIGINS)
 
+app.add_middleware(StrictInputValidationMiddleware, max_upload_size=2 * 1024 * 1024) # 2MB limit
+
 # Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
@@ -234,7 +236,6 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Pragma"] = "no-cache"
     return response
 
-app.add_middleware(StrictInputValidationMiddleware, max_upload_size=2 * 1024 * 1024) # 2MB limit
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Resolve cases directory relative to the project root (2 levels up from backend/main.py)
