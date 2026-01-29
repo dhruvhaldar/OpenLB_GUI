@@ -538,7 +538,12 @@ function App() {
               </div>
             </div>
           </>
-        ) : !isLoadingCases && cases.length === 0 ? (
+        ) : isLoadingCases ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
+            <Loader2 size={48} className="animate-spin text-blue-500" aria-hidden="true" />
+            <h3 className="text-lg font-medium text-gray-300">Loading Cases...</h3>
+          </div>
+        ) : cases.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4 p-8">
             <div className="p-4 bg-gray-800 rounded-full ring-1 ring-gray-700">
               <FolderPlus size={48} className="text-blue-500" aria-hidden="true" />

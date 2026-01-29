@@ -37,3 +37,7 @@
 ## 2025-05-29 - Empty State Keyboard Hints
 **Learning:** Empty states are valuable real estate for teaching keyboard shortcuts that would otherwise be hidden.
 **Action:** Use empty content areas to display prominent keyboard shortcut hints for initiating the primary workflow (e.g. search).
+
+## 2025-05-30 - Main Content Loading States
+**Learning:** During initial data fetch or refresh, showing a generic "No Selection" state while the sidebar is loading creates a disconnect and implies an actionable state that doesn't exist.
+**Action:** Implement a dedicated, full-size loading state for the main content area that activates specifically when the data source is loading and no item is currently selected.
