@@ -41,3 +41,7 @@
 ## 2025-05-30 - Main Content Loading States
 **Learning:** During initial data fetch or refresh, showing a generic "No Selection" state while the sidebar is loading creates a disconnect and implies an actionable state that doesn't exist.
 **Action:** Implement a dedicated, full-size loading state for the main content area that activates specifically when the data source is loading and no item is currently selected.
+
+## 2025-05-31 - State-Dependent Styling with Groups
+**Learning:** Styling child elements (like search highlights) based on their parent's interaction state (e.g. `aria-current`) is brittle if done via props.
+**Action:** Use Tailwind's `group` class on the container and `group-aria-[current=true]:...` modifiers on children to cleanly encapsulate state-dependent styling without excessive prop drilling.
