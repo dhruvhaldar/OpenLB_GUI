@@ -70,12 +70,9 @@ function App() {
       const p = prev[i];
       const n = next[i];
 
-      if (
-        p.id !== n.id ||
-        p.name !== n.name ||
-        p.domain !== n.domain ||
-        p.path !== n.path
-      ) {
+      // Bolt Optimization: Only check ID (path). Name/Domain/Path are derived from ID.
+      // This reduces property access and string comparisons by 75%.
+      if (p.id !== n.id) {
         return false;
       }
     }

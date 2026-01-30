@@ -20,6 +20,7 @@ import stat
 from collections import defaultdict, deque
 from pathlib import Path
 from functools import lru_cache
+from operator import itemgetter
 
 # Configure logging
 logging.basicConfig(
@@ -195,7 +196,6 @@ async def add_security_headers(request: Request, call_next):
     elif request.method == "GET":
         if read_rate_limiter.is_rate_limited(client_ip):
             logger.warning(f"Read Rate limit exceeded for {client_ip} on {request.url.path}")
-            from fastapi.responses import JSONResponse
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."}
@@ -758,7 +758,8 @@ def list_cases():
     # Performance Optimization: Sort cases by domain and name.
     # This ensures deterministic order (O(N log N)) regardless of filesystem order.
     # It allows the frontend to use efficient O(N) sequential comparison instead of O(N) Map lookups.
-    cases.sort(key=lambda x: (x['domain'], x['name']))
+    # Bolt Optimization: Use itemgetter for C-speed tuple extraction instead of lambda
+    cases.sort(key=itemgetter('domain', 'name'))
 
     return cases
 
