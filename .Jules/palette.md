@@ -45,3 +45,7 @@
 ## 2025-05-31 - Code Editor Accessibility
 **Learning:** Implementing "Tab" for indentation in textareas improves UX for developers but creates a keyboard trap.
 **Action:** When trapping focus with Tab, strictly follow WCAG 2.1.2 by implementing an "Escape" hatch (blur) and providing visible and programmatic (aria-describedby) instructions.
+
+## 2025-06-01 - List Search Feedback
+**Learning:** Highlighting search terms in a filtered list provides immediate visual confirmation of *why* an item matched.
+**Action:** Use a dedicated `HighlightMatch` helper to split and style text segments, ensuring high contrast for the match (e.g. bold blue) while maintaining accessible selection states (e.g. switching to white underline on selection).
