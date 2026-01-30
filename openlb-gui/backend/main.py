@@ -145,6 +145,21 @@ class StrictInputValidationMiddleware(BaseHTTPMiddleware):
 
             if content_length > self.max_upload_size:
                 return JSONResponse(status_code=413, content={"detail": "Request body too large"})
+
+        # Sentinel Enhancement: Reject bodies for GET/DELETE/HEAD/OPTIONS
+        # Prevents Request Smuggling, Cache Poisoning, and ambiguities.
+        elif request.method in ["GET", "DELETE", "HEAD", "OPTIONS"]:
+             if request.headers.get("transfer-encoding"):
+                 return JSONResponse(status_code=400, content={"detail": "Request body not allowed for this method (Transfer-Encoding present)"})
+
+             if "content-length" in request.headers:
+                 try:
+                     length = int(request.headers["content-length"])
+                     if length > 0:
+                         return JSONResponse(status_code=400, content={"detail": "Request body not allowed for this method"})
+                 except ValueError:
+                     return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length header"})
+
         return await call_next(request)
 
 # Allow CORS for frontend dev
@@ -195,7 +210,6 @@ async def add_security_headers(request: Request, call_next):
     elif request.method == "GET":
         if read_rate_limiter.is_rate_limited(client_ip):
             logger.warning(f"Read Rate limit exceeded for {client_ip} on {request.url.path}")
-            from fastapi.responses import JSONResponse
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."}
