@@ -239,7 +239,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     # Sentinel Enhancement: Strict Permissions Policy
     # Explicitly disable powerful browser features to reduce attack surface (Defense in Depth).
-    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=()"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=(), midi=(), sync-xhr=(), accelerometer=(), gyroscope=(), magnetometer=(), fullscreen=(), picture-in-picture=()"
     # Sentinel Enhancement: Prevent leaking resources to other origins (e.g. Spectre)
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     # Sentinel Enhancement: Prevent caching of sensitive data (config, logs)
@@ -999,4 +999,4 @@ if __name__ == "__main__":
     # Sentinel: Bind to 127.0.0.1 (localhost) by default to prevent access from external networks.
     # Allow overriding via HOST env var for Docker/remote scenarios.
     host = os.getenv("HOST", "127.0.0.1")
-    uvicorn.run(app, host=host, port=8080)
+    uvicorn.run(app, host=host, port=8080, server_header=False)
