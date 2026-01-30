@@ -41,3 +41,7 @@
 ## 2025-05-30 - Main Content Loading States
 **Learning:** During initial data fetch or refresh, showing a generic "No Selection" state while the sidebar is loading creates a disconnect and implies an actionable state that doesn't exist.
 **Action:** Implement a dedicated, full-size loading state for the main content area that activates specifically when the data source is loading and no item is currently selected.
+
+## 2025-05-31 - Code Editor Accessibility
+**Learning:** Implementing "Tab" for indentation in textareas improves UX for developers but creates a keyboard trap.
+**Action:** When trapping focus with Tab, strictly follow WCAG 2.1.2 by implementing an "Escape" hatch (blur) and providing visible and programmatic (aria-describedby) instructions.

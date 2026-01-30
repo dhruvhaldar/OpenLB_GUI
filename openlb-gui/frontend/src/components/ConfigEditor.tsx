@@ -95,12 +95,37 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     }, 300);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Save shortcut
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
       if (!isLoading) {
         handleSave();
       }
+      return;
+    }
+
+    // UX: Allow standard Tab indentation for better coding experience
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault();
+      const target = e.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const value = target.value;
+
+      // Insert 2 spaces
+      target.value = value.substring(0, start) + '  ' + value.substring(end);
+
+      // Move cursor after the inserted spaces
+      target.selectionStart = target.selectionEnd = start + 2;
+
+      // Trigger dirty check
+      handleChange();
+    }
+
+    // Accessibility: Ensure users can escape the trapped focus
+    if (e.key === 'Escape') {
+      e.currentTarget.blur();
     }
   };
 
@@ -119,6 +144,7 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
       <div className="flex justify-between items-center mb-2">
         <h3 id="config-editor-title" className="font-semibold text-gray-400 flex items-center gap-2">
           <FileText size={16} /> Configuration
+          <span className="text-[10px] text-gray-500 font-normal ml-1 hidden sm:inline-block" aria-hidden="true">(Esc to exit)</span>
         </h3>
         <div className="flex gap-2">
           <button
@@ -167,9 +193,14 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
           <Loader2 className="animate-spin mr-2" /> Loading config...
         </div>
       ) : (
-        <textarea
+        <>
+          <span id="editor-help-text" className="sr-only">
+            Press Tab to insert spaces. Press Escape to exit the editor.
+          </span>
+          <textarea
           ref={textareaRef}
           aria-labelledby="config-editor-title"
+          aria-describedby="editor-help-text"
           defaultValue={initialContent}
           onKeyDown={handleKeyDown}
           onChange={handleChange}
@@ -178,6 +209,7 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
           autoCapitalize="off"
           className="flex-1 bg-gray-950 text-gray-300 p-4 rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
+        </>
       )}
     </div>
   );
