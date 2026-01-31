@@ -248,6 +248,11 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cache-Control"] = "no-store"
     # Legacy compatibility for HTTP/1.0 proxies
     response.headers["Pragma"] = "no-cache"
+    # Sentinel Enhancement: Enforce HTTPS (HSTS)
+    # Tells browsers to ONLY use HTTPS for future requests (cached for 2 years).
+    # 'includeSubDomains' protects all subdomains. 'preload' allows inclusion in browser HSTS preload lists.
+    # Note: Ignored by browsers on plain HTTP, but critical if app is proxied via HTTPS.
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
     return response
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
