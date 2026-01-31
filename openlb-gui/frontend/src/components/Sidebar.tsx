@@ -167,6 +167,16 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
+  // UX: Auto-scroll to selected item
+  useEffect(() => {
+    if (selectedCaseId && listRef.current) {
+      const selectedEl = listRef.current.querySelector('[aria-current="true"]');
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [selectedCaseId, cases]);
+
   const handleListKeyDown = (e: React.KeyboardEvent) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
 

@@ -45,3 +45,7 @@
 ## 2025-05-31 - Code Editor Accessibility
 **Learning:** Implementing "Tab" for indentation in textareas improves UX for developers but creates a keyboard trap.
 **Action:** When trapping focus with Tab, strictly follow WCAG 2.1.2 by implementing an "Escape" hatch (blur) and providing visible and programmatic (aria-describedby) instructions.
+
+## 2025-06-01 - Master-Detail List Synchronization
+**Learning:** When programmatically selecting an item (e.g. after duplication) in a long list, the item may be out of view, causing user disorientation.
+**Action:** Implement `useEffect` to automatically scroll the selected item into view within the scrollable container.
