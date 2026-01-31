@@ -32,7 +32,7 @@ ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
 app.add_middleware(TrustedOriginMiddleware, allowed_origins=ALLOWED_ORIGINS)
 
 @app.post("/test")
-def test_endpoint():
+def endpoint_handler():
     return {"message": "success"}
 
 client = TestClient(app)
