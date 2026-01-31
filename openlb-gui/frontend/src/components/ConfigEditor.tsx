@@ -90,7 +90,16 @@ const ConfigEditor: React.FC<ConfigEditorProps> = ({ initialContent, onSave, cla
     // on every single keystroke, significantly reducing GC pressure for large config files.
     debounceRef.current = setTimeout(() => {
         if (textareaRef.current) {
-             setIsDirty(textareaRef.current.value !== lastSavedContent.current);
+             // Bolt Optimization: Check length first to avoid expensive string allocation/copy
+             // Accessing .textLength is O(1) property access, whereas .value allocates a new JS string.
+             const currentLength = textareaRef.current.textLength;
+             const savedLength = lastSavedContent.current.length;
+
+             if (currentLength !== savedLength) {
+                 setIsDirty(true);
+             } else {
+                 setIsDirty(textareaRef.current.value !== lastSavedContent.current);
+             }
         }
     }, 300);
   };
