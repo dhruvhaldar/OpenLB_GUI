@@ -694,6 +694,12 @@ def list_cases():
             for entry1 in it1:
                 if not entry1.is_dir() or entry1.name.startswith('.'): continue
 
+                # Bolt Optimization: Skip ignored directories (e.g. tmp, __pycache__)
+                # This prevents unnecessary recursion and stat calls in massive build/output directories.
+                check_name = entry1.name.lower() if os.name == 'nt' else entry1.name
+                if check_name in IGNORED_DIRS:
+                    continue
+
                 # Optimization: Cache symlink status and resolve only once per entry
                 # This prevents redundant resolve() calls when an entry is checked for both
                 # being a case (Level 1) and a domain container (Level 2).
@@ -738,6 +744,11 @@ def list_cases():
                     with os.scandir(entry1.path) as it2:
                         for entry2 in it2:
                             if not entry2.is_dir() or entry2.name.startswith('.'): continue
+
+                            # Bolt Optimization: Skip ignored directories
+                            check_name_2 = entry2.name.lower() if os.name == 'nt' else entry2.name
+                            if check_name_2 in IGNORED_DIRS:
+                                continue
 
                             mk2 = os.path.join(entry2.path, "Makefile")
                             if os.path.isfile(mk2):
