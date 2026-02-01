@@ -6,19 +6,17 @@ interface SidebarItemProps {
   item: Case;
   isSelected: boolean;
   onSelect: (c: Case) => void;
-  searchTerm?: string;
+  searchRegex?: RegExp;
 }
 
-const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
-  if (!match) return <span className="truncate">{text}</span>;
+const HighlightMatch = ({ text, searchRegex }: { text: string; searchRegex?: RegExp }) => {
+  if (!searchRegex) return <span className="truncate">{text}</span>;
 
-  // Escape special characters to prevent regex crashes
-  const escapedMatch = match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const parts = text.split(new RegExp(`(${escapedMatch})`, 'gi'));
+  const parts = text.split(searchRegex);
   return (
     <span className="truncate">
       {parts.map((part, i) =>
-        part.toLowerCase() === match.toLowerCase() ? (
+        i % 2 === 1 ? (
           <span
             key={i}
             className="font-bold text-blue-400 group-aria-[current=true]:text-white group-aria-[current=true]:underline"
@@ -33,7 +31,7 @@ const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
   );
 };
 
-const SidebarItem = memo(({ item, isSelected, onSelect, searchTerm }: SidebarItemProps) => {
+const SidebarItem = memo(({ item, isSelected, onSelect, searchRegex }: SidebarItemProps) => {
   return (
     <button
       onClick={() => onSelect(item)}
@@ -42,7 +40,7 @@ const SidebarItem = memo(({ item, isSelected, onSelect, searchTerm }: SidebarIte
       className={`group w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
     >
       <Folder size={16} aria-hidden="true" />
-      <HighlightMatch text={item.name} match={searchTerm} />
+      <HighlightMatch text={item.name} searchRegex={searchRegex} />
     </button>
   );
 }, (prev, next) => {
@@ -54,7 +52,7 @@ const SidebarItem = memo(({ item, isSelected, onSelect, searchTerm }: SidebarIte
     prev.item.id === next.item.id &&
     prev.item.name === next.item.name &&
     prev.onSelect === next.onSelect &&
-    prev.searchTerm === next.searchTerm
+    prev.searchRegex === next.searchRegex
   );
 });
 
@@ -71,6 +69,13 @@ interface SidebarListItemsProps {
 // and triggers N prop comparisons. By memoizing the list container, we skip this entirely
 // when 'cases' (filtered list) hasn't changed.
 const SidebarListItems = memo(({ cases, selectedId, onSelect, searchTerm }: SidebarListItemsProps) => {
+  // Optimization: Pre-compute regex to avoid re-creating it for every item on every render
+  const searchRegex = useMemo(() => {
+    if (!searchTerm) return undefined;
+    const escapedMatch = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(${escapedMatch})`, 'gi');
+  }, [searchTerm]);
+
   return (
     <>
       {cases.map(c => (
@@ -79,7 +84,7 @@ const SidebarListItems = memo(({ cases, selectedId, onSelect, searchTerm }: Side
             item={c}
             isSelected={selectedId === c.id}
             onSelect={onSelect}
-            searchTerm={searchTerm}
+            searchRegex={searchRegex}
           />
         </li>
       ))}
