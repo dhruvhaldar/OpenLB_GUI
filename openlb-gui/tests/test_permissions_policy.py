@@ -29,7 +29,11 @@ def test_permissions_policy_header():
         "gyroscope",
         "magnetometer",
         "fullscreen",
-        "picture-in-picture"
+        "picture-in-picture",
+        "screen-wake-lock",
+        "web-share",
+        "clipboard-read",
+        "clipboard-write"
     ]
 
     for directive in required_directives:

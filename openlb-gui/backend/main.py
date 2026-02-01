@@ -239,7 +239,14 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     # Sentinel Enhancement: Strict Permissions Policy
     # Explicitly disable powerful browser features to reduce attack surface (Defense in Depth).
-    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=(), midi=(), sync-xhr=(), accelerometer=(), gyroscope=(), magnetometer=(), fullscreen=(), picture-in-picture=()"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=(), midi=(), sync-xhr=(), accelerometer=(), gyroscope=(), magnetometer=(), fullscreen=(), picture-in-picture=(), screen-wake-lock=(), web-share=(), clipboard-read=(), clipboard-write=()"
+
+    # Sentinel Enhancement: HSTS (Strict-Transport-Security)
+    # Enforce HTTPS for production deployments.
+    # We check for HTTPS scheme or X-Forwarded-Proto (standard for proxies).
+    if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+
     # Sentinel Enhancement: Prevent leaking resources to other origins (e.g. Spectre)
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     # Sentinel Enhancement: Prevent caching of sensitive data (config, logs)
@@ -287,7 +294,7 @@ VALID_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
 # or if the project is later moved to a Windows machine (DoS / Access Denied).
 # We block them case-insensitively.
 RESERVED_WINDOWS_NAMES = {
-    "CON", "PRN", "AUX", "NUL",
+    "CON", "PRN", "AUX", "NUL", "CLOCK$",
     "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
     "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
 }

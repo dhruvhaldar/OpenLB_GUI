@@ -58,3 +58,18 @@ def test_duplicate_reserved_name_case_insensitive(clean_env):
 
     assert response.status_code == 400
     assert "reserved" in response.json()['detail'].lower()
+
+def test_duplicate_reserved_name_clock(clean_env):
+    source_name = clean_env
+
+    # Try to duplicate to "CLOCK$"
+    response = client.post("/cases/duplicate", json={
+        "source_path": source_name,
+        "new_name": "CLOCK$"
+    })
+
+    assert response.status_code == 400
+    detail = response.json()['detail'].lower()
+    # CLOCK$ is blocked by the regex (due to '$') before the reserved check.
+    # We accept either error message as proof of blocking.
+    assert "reserved" in detail or "invalid name" in detail
