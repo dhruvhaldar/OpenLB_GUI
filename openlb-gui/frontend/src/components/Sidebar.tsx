@@ -214,6 +214,21 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     }
   };
 
+  useEffect(() => {
+    // UX: Auto-scroll selected item into view
+    // This ensures that when the selection changes (e.g. via duplicate, or filter clearing),
+    // the selected item is always visible to the user.
+    if (selectedCaseId && listRef.current) {
+      // Use requestAnimationFrame to ensure the DOM has updated (especially after filter changes)
+      requestAnimationFrame(() => {
+        const selectedBtn = listRef.current?.querySelector('[aria-current="true"]');
+        if (selectedBtn) {
+          selectedBtn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      });
+    }
+  }, [selectedCaseId, filteredCases]);
+
   return (
     <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
       <div className="p-4 flex items-center justify-between">

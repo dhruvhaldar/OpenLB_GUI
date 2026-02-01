@@ -45,3 +45,7 @@
 ## 2025-05-31 - Code Editor Accessibility
 **Learning:** Implementing "Tab" for indentation in textareas improves UX for developers but creates a keyboard trap.
 **Action:** When trapping focus with Tab, strictly follow WCAG 2.1.2 by implementing an "Escape" hatch (blur) and providing visible and programmatic (aria-describedby) instructions.
+
+## 2025-06-01 - Sidebar Auto-scroll
+**Learning:** When filtering or updating lists, the selected item can easily fall out of the viewport (e.g. after clearing a filter), disorienting the user.
+**Action:** Automatically scroll the active item (`aria-current="true"`) into view when the selection or list structure changes, using `scrollIntoView({ block: 'nearest' })` to maintain context.
