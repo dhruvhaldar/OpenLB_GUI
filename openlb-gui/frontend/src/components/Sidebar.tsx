@@ -247,7 +247,7 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full bg-gray-900 text-xs text-gray-300 rounded border border-gray-700 pl-8 pr-8 py-1.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-600"
+              className="w-full bg-gray-900 text-xs text-gray-300 rounded border border-gray-700 pl-8 pr-8 py-1.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-500"
               aria-label="Filter cases"
             />
             {filter && (
