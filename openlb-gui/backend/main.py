@@ -216,6 +216,14 @@ async def add_security_headers(request: Request, call_next):
             )
 
     response = await call_next(request)
+    # Sentinel Enhancement: Add HSTS Header
+    # Enforce HTTPS for 2 years (63072000s) and include subdomains.
+    # Only applied if the request is already secure (HTTPS) to avoid locking out HTTP-only setups
+    # (e.g., local dev) or mixed content loops.
+    # We check standard scheme OR X-Forwarded-Proto (for reverse proxies like Nginx/Traefik).
+    if request.url.scheme == "https" or request.headers.get("X-Forwarded-Proto") == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     # Sentinel Enhancement: Prevent Clickjacking via CSP
