@@ -1,13 +1,12 @@
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 
 interface DuplicateCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  duplicateName: string;
-  onNameChange: (name: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  initialName: string;
+  onSubmit: (name: string) => void;
   isDuplicating: boolean;
   error: string | null;
 }
@@ -15,13 +14,13 @@ interface DuplicateCaseModalProps {
 const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
   isOpen,
   onClose,
-  duplicateName,
-  onNameChange,
+  initialName,
   onSubmit,
   isDuplicating,
   error
 }) => {
   const duplicateInputRef = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState(initialName);
 
   useEffect(() => {
     if (isOpen) {
@@ -34,13 +33,18 @@ const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
     }
   }, [isOpen]);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(name);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Duplicate Case"
     >
-      <form onSubmit={onSubmit}>
+      <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label htmlFor="caseName" className="block text-sm font-medium mb-2 text-gray-300">
             New Case Name
@@ -49,8 +53,8 @@ const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
             ref={duplicateInputRef}
             id="caseName"
             type="text"
-            value={duplicateName}
-            onChange={(e) => onNameChange(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className={`w-full bg-gray-900 border rounded px-3 py-2 text-white focus:outline-none placeholder-gray-600 transition-colors ${
               error
                 ? 'border-red-500 focus:ring-2 focus:ring-red-500'
@@ -74,7 +78,7 @@ const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
           </button>
           <button
             type="submit"
-            disabled={!duplicateName.trim() || isDuplicating}
+            disabled={!name.trim() || isDuplicating}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
           >
             {isDuplicating && <Loader2 className="animate-spin" size={16} />}

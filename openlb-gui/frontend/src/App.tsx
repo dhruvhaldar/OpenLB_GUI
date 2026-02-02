@@ -26,7 +26,6 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [duplicateName, setDuplicateName] = useState('');
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -275,14 +274,12 @@ function App() {
 
   const handleDuplicate = () => {
     if (!selectedCase) return;
-    setDuplicateName(`${selectedCase.name}_copy`);
     setDuplicateError(null);
     setIsDuplicateModalOpen(true);
   };
 
-  const handleDuplicateSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCase || !duplicateName) return;
+  const handleDuplicateSubmit = useCallback(async (name: string) => {
+    if (!selectedCase || !name) return;
 
     setIsDuplicating(true);
     setDuplicateError(null);
@@ -290,7 +287,7 @@ function App() {
       const res = await fetch(`${API_URL}/cases/duplicate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_path: selectedCase.path, new_name: duplicateName })
+        body: JSON.stringify({ source_path: selectedCase.path, new_name: name })
       });
       if (!res.ok) {
         const err = await res.json();
@@ -323,7 +320,7 @@ function App() {
     } finally {
       setIsDuplicating(false);
     }
-  }, [selectedCase, duplicateName, handleSelectCase]);
+  }, [selectedCase, handleSelectCase]);
 
   const handleDeleteClick = useCallback(() => {
     if (!selectedCase) return;
@@ -584,10 +581,10 @@ function App() {
       </div>
 
       <DuplicateCaseModal
+        key={isDuplicateModalOpen ? 'open' : 'closed'}
         isOpen={isDuplicateModalOpen}
         onClose={handleCloseDuplicate}
-        duplicateName={duplicateName}
-        onNameChange={setDuplicateName}
+        initialName={selectedCase ? `${selectedCase.name}_copy` : ''}
         onSubmit={handleDuplicateSubmit}
         isDuplicating={isDuplicating}
         error={duplicateError}
