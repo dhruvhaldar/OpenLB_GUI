@@ -74,7 +74,7 @@ const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
           </button>
           <button
             type="submit"
-            disabled={!duplicateName.trim() || isDuplicating}
+            disabled={!duplicateName.trim() || isDuplicating || !!error}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
           >
             {isDuplicating && <Loader2 className="animate-spin" size={16} />}

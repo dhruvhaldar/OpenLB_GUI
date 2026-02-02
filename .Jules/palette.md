@@ -45,3 +45,7 @@
 ## 2025-05-31 - Code Editor Accessibility
 **Learning:** Implementing "Tab" for indentation in textareas improves UX for developers but creates a keyboard trap.
 **Action:** When trapping focus with Tab, strictly follow WCAG 2.1.2 by implementing an "Escape" hatch (blur) and providing visible and programmatic (aria-describedby) instructions.
+
+## 2025-06-01 - Optimistic Validation
+**Learning:** For actions bound by server constraints (like unique names), waiting for server errors frustrates users.
+**Action:** Use existing client-side data (e.g. cached lists) to proactively validate inputs in real-time, preventing the "Submit -> Error -> Retry" loop.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Terminal, Play, Settings, Loader2, Copy, Check, FolderOpen, Trash2, Download, CopyPlus, Eraser, WrapText, RefreshCw, FolderPlus } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ConfigEditor from './components/ConfigEditor';
@@ -29,6 +29,40 @@ function App() {
   const [duplicateName, setDuplicateName] = useState('');
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // UX: Real-time validation for duplicate names
+  // Prevents users from submitting invalid names or duplicates before hitting the server.
+  const duplicateValidationError = useMemo(() => {
+    if (!duplicateName) return null;
+    const name = duplicateName.trim();
+    if (!name) return null;
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+      return "Invalid name. Use alphanumeric, underscore, and hyphen only.";
+    }
+
+    const reserved = new Set([
+      "CON", "PRN", "AUX", "NUL", "CLOCK$",
+      "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+      "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    ]);
+
+    if (reserved.has(name.toUpperCase())) {
+      return "Invalid name. This name is reserved by Windows.";
+    }
+
+    if (selectedCase) {
+      // Check duplicates within the same domain
+      const isDuplicate = cases.some(c =>
+        c.domain === selectedCase.domain &&
+        c.name.toLowerCase() === name.toLowerCase()
+      );
+      if (isDuplicate) {
+        return "Case with this name already exists";
+      }
+    }
+    return null;
+  }, [duplicateName, selectedCase, cases]);
 
   // Optimization: Cache config content to avoid unnecessary network requests
   // Use a Map to implement LRU (Least Recently Used) eviction policy.
@@ -590,7 +624,7 @@ function App() {
         onNameChange={setDuplicateName}
         onSubmit={handleDuplicateSubmit}
         isDuplicating={isDuplicating}
-        error={duplicateError}
+        error={duplicateError || duplicateValidationError}
       />
 
       <DeleteCaseModal
