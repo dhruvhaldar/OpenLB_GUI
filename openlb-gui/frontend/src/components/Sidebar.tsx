@@ -294,7 +294,9 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
               aria-busy={isLoading}
               onKeyDown={handleListKeyDown}
             >
-              {isLoading ? (
+              {/* Bolt Optimization: Only show skeleton on initial load.
+                  During refresh, keep showing the existing list to prevent layout thrashing and scroll jumping. */}
+              {isLoading && cases.length === 0 ? (
                 <>
                   <li className="animate-pulse flex items-center gap-2 px-3 py-2">
                     <div className="w-4 h-4 bg-gray-700 rounded" />
