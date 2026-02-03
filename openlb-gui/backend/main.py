@@ -616,10 +616,14 @@ def duplicate_case(req: DuplicateRequest, request: Request):
     target_path = os.path.join(parent_dir, req.new_name)
 
     # Validate target path (even though constructed safely, ensures it's in CASES_DIR)
-    try:
-        if not Path(target_path).resolve().is_relative_to(CASES_PATH):
-             raise HTTPException(status_code=403, detail="Access denied")
-    except Exception:
+    # Performance Optimization: Use os.path.realpath + string check instead of Path.resolve()
+    # Pathlib's resolve() and relative_to() involve object overhead and iterative checks.
+    # This aligns with validate_case_path optimization.
+    resolved_target = os.path.realpath(target_path)
+
+    # Optimization: Use pre-computed separator path for fast containment check
+    if not (resolved_target == CASES_DIR or resolved_target.startswith(CASES_DIR_WITH_SEP)):
+        logger.warning(f"Access denied: Target path outside cases directory: {target_path} -> {resolved_target}")
         raise HTTPException(status_code=403, detail="Access denied")
 
     if os.path.exists(target_path):
