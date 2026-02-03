@@ -248,6 +248,15 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cache-Control"] = "no-store"
     # Legacy compatibility for HTTP/1.0 proxies
     response.headers["Pragma"] = "no-cache"
+
+    # Sentinel Enhancement: HTTP Strict Transport Security (HSTS)
+    # HSTS tells the browser to ONLY use HTTPS for future requests.
+    # It protects against SSL Stripping and Protocol Downgrade attacks.
+    # We apply it only if the current connection is secure (or forwarded as secure)
+    # to avoid locking out users on plain HTTP (e.g. initial setup).
+    if request.url.scheme == "https" or request.headers.get("X-Forwarded-Proto") == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+
     return response
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
