@@ -104,6 +104,15 @@ function App() {
     refreshCases();
   }, [refreshCases]);
 
+  // UX Improvement: Dynamically update document title based on selected case
+  useEffect(() => {
+    if (selectedCase) {
+      document.title = `${selectedCase.name} - OpenLB Manager`;
+    } else {
+      document.title = 'OpenLB Manager';
+    }
+  }, [selectedCase]);
+
   const fetchConfig = useCallback(async (casePath: string) => {
     // Optimization: Check cache first (LRU)
     if (configCache.current.has(casePath)) {
