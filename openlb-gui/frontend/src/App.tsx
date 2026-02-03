@@ -375,6 +375,14 @@ function App() {
     setIsDeleteModalOpen(false);
   }, []);
 
+  useEffect(() => {
+    if (selectedCase) {
+      document.title = `${selectedCase.name} - OpenLB Manager`;
+    } else {
+      document.title = 'OpenLB Manager';
+    }
+  }, [selectedCase]);
+
   return (
     <div className="flex h-screen bg-gray-900 text-white font-sans">
       <a
