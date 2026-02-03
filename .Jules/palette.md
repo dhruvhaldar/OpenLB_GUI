@@ -45,3 +45,7 @@
 ## 2025-05-31 - Code Editor Accessibility
 **Learning:** Implementing "Tab" for indentation in textareas improves UX for developers but creates a keyboard trap.
 **Action:** When trapping focus with Tab, strictly follow WCAG 2.1.2 by implementing an "Escape" hatch (blur) and providing visible and programmatic (aria-describedby) instructions.
+
+## 2025-06-01 - Ambiguous List Items
+**Learning:** In lists where items may have identical names but different contexts (e.g. same name in different domains), standard tooltips showing only the name fail to disambiguate.
+**Action:** Enhance tooltips and `aria-label` attributes to include the full context (e.g. "Domain / Name") to prevent confusion for both mouse and screen reader users.

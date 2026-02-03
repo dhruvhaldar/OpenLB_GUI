@@ -32,10 +32,13 @@ const HighlightMatch = ({ text, regex }: { text: string; regex?: RegExp }) => {
 };
 
 const SidebarItem = memo(({ item, isSelected, onSelect, searchRegex }: SidebarItemProps) => {
+  const accessibleName = `${item.domain} / ${item.name}`;
+
   return (
     <button
       onClick={() => onSelect(item)}
-      title={item.name}
+      title={accessibleName}
+      aria-label={accessibleName}
       aria-current={isSelected ? 'true' : undefined}
       className={`group w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
     >
@@ -51,6 +54,7 @@ const SidebarItem = memo(({ item, isSelected, onSelect, searchRegex }: SidebarIt
     prev.isSelected === next.isSelected &&
     prev.item.id === next.item.id &&
     prev.item.name === next.item.name &&
+    prev.item.domain === next.item.domain &&
     prev.onSelect === next.onSelect &&
     prev.searchRegex === next.searchRegex
   );
