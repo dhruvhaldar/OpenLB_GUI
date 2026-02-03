@@ -6,19 +6,17 @@ interface SidebarItemProps {
   item: Case;
   isSelected: boolean;
   onSelect: (c: Case) => void;
-  searchTerm?: string;
+  searchRegex?: RegExp;
 }
 
-const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
-  if (!match) return <span className="truncate">{text}</span>;
+const HighlightMatch = ({ text, regex }: { text: string; regex?: RegExp }) => {
+  if (!regex) return <span className="truncate">{text}</span>;
 
-  // Escape special characters to prevent regex crashes
-  const escapedMatch = match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const parts = text.split(new RegExp(`(${escapedMatch})`, 'gi'));
+  const parts = text.split(regex);
   return (
     <span className="truncate">
       {parts.map((part, i) =>
-        part.toLowerCase() === match.toLowerCase() ? (
+        i % 2 === 1 ? (
           <span
             key={i}
             className="font-bold text-blue-400 group-aria-[current=true]:text-white group-aria-[current=true]:underline"
@@ -33,7 +31,7 @@ const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
   );
 };
 
-const SidebarItem = memo(({ item, isSelected, onSelect, searchTerm }: SidebarItemProps) => {
+const SidebarItem = memo(({ item, isSelected, onSelect, searchRegex }: SidebarItemProps) => {
   return (
     <button
       onClick={() => onSelect(item)}
@@ -42,7 +40,7 @@ const SidebarItem = memo(({ item, isSelected, onSelect, searchTerm }: SidebarIte
       className={`group w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
     >
       <Folder size={16} aria-hidden="true" />
-      <HighlightMatch text={item.name} match={searchTerm} />
+      <HighlightMatch text={item.name} regex={searchRegex} />
     </button>
   );
 }, (prev, next) => {
@@ -54,7 +52,7 @@ const SidebarItem = memo(({ item, isSelected, onSelect, searchTerm }: SidebarIte
     prev.item.id === next.item.id &&
     prev.item.name === next.item.name &&
     prev.onSelect === next.onSelect &&
-    prev.searchTerm === next.searchTerm
+    prev.searchRegex === next.searchRegex
   );
 });
 
@@ -62,7 +60,7 @@ interface SidebarListItemsProps {
   cases: Case[];
   selectedId: string | undefined;
   onSelect: (c: Case) => void;
-  searchTerm?: string;
+  searchRegex?: RegExp;
 }
 
 // Optimization: Isolate the list rendering to prevent reconciliation of the entire list
@@ -70,7 +68,7 @@ interface SidebarListItemsProps {
 // Even though SidebarItem is memoized, re-rendering the mapping loop creates N new Element objects
 // and triggers N prop comparisons. By memoizing the list container, we skip this entirely
 // when 'cases' (filtered list) hasn't changed.
-const SidebarListItems = memo(({ cases, selectedId, onSelect, searchTerm }: SidebarListItemsProps) => {
+const SidebarListItems = memo(({ cases, selectedId, onSelect, searchRegex }: SidebarListItemsProps) => {
   return (
     <>
       {cases.map(c => (
@@ -79,7 +77,7 @@ const SidebarListItems = memo(({ cases, selectedId, onSelect, searchTerm }: Side
             item={c}
             isSelected={selectedId === c.id}
             onSelect={onSelect}
-            searchTerm={searchTerm}
+            searchRegex={searchRegex}
           />
         </li>
       ))}
@@ -103,6 +101,16 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
   const deferredFilter = useDeferredValue(filter);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+
+  // Optimization: Create the regex only once per filter change.
+  // This avoids creating N RegExp objects in HighlightMatch (one per item).
+  // This reduces object allocation and initialization overhead during rendering.
+  const searchRegex = useMemo(() => {
+    if (!deferredFilter) return undefined;
+    // Escape special characters to prevent regex crashes
+    const escapedMatch = deferredFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(${escapedMatch})`, 'gi');
+  }, [deferredFilter]);
 
   // Optimization: Pre-compute search strings to avoid repeated .toLowerCase() calls during filtering
   // This reduces the filtering complexity from O(N * M) to O(N) where M is the string length.
@@ -306,7 +314,7 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
                   cases={filteredCases}
                   selectedId={selectedCaseId}
                   onSelect={onSelectCase}
-                  searchTerm={deferredFilter}
+                  searchRegex={searchRegex}
                 />
               ) : (
                 <li className="text-gray-500 text-sm px-3 py-2 text-center flex flex-col items-center gap-2">
