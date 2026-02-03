@@ -188,34 +188,11 @@ app.add_middleware(TrustedOriginMiddleware, allowed_origins=ALLOWED_ORIGINS)
 
 app.add_middleware(StrictInputValidationMiddleware, max_upload_size=2 * 1024 * 1024) # 2MB limit
 
-# Security Headers Middleware
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    # Rate Limiting for state-changing operations
-    # We apply this before processing the request
-    # Sentinel: Broadened scope to all state-changing methods to prevent bypasses and future oversight
-    client_ip = request.client.host if request.client else "unknown"
-    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-        if rate_limiter.is_rate_limited(client_ip):
-            logger.warning(f"Write Rate limit exceeded for {client_ip} on {request.url.path}")
-            # We return a JSON response directly for 429
-            # Note: We can't easily raise HTTPException in middleware, so we return Response
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "Too many requests. Please try again later."}
-            )
-
-    # Sentinel Enhancement: Rate Limiting for Read Operations (GET)
-    # Protects against DoS attacks via rapid read requests (e.g., recursive scanning, file reading).
-    elif request.method == "GET":
-        if read_rate_limiter.is_rate_limited(client_ip):
-            logger.warning(f"Read Rate limit exceeded for {client_ip} on {request.url.path}")
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "Too many requests. Please try again later."}
-            )
-
-    response = await call_next(request)
+def apply_security_headers(response: Response, request: Request):
+    """
+    Helper to consistently apply security headers to any response.
+    Ensures headers are present even on early-exit error responses (e.g. 429).
+    """
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     # Sentinel Enhancement: Prevent Clickjacking via CSP
@@ -240,8 +217,6 @@ async def add_security_headers(request: Request, call_next):
     # Sentinel Enhancement: Strict Permissions Policy
     # Explicitly disable powerful browser features to reduce attack surface (Defense in Depth).
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=(), autoplay=(), midi=(), sync-xhr=(), accelerometer=(), gyroscope=(), magnetometer=(), fullscreen=(), picture-in-picture=()"
-    # Sentinel Enhancement: Prevent leaking resources to other origins (e.g. Spectre)
-    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     # Sentinel Enhancement: Prevent caching of sensitive data (config, logs)
     # The 'no-store' directive prevents browsers and intermediate proxies from storing
     # any version of the response, forcing a fresh fetch every time.
@@ -258,6 +233,38 @@ async def add_security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
 
     return response
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    # Rate Limiting for state-changing operations
+    # We apply this before processing the request
+    # Sentinel: Broadened scope to all state-changing methods to prevent bypasses and future oversight
+    client_ip = request.client.host if request.client else "unknown"
+    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+        if rate_limiter.is_rate_limited(client_ip):
+            logger.warning(f"Write Rate limit exceeded for {client_ip} on {request.url.path}")
+            # We return a JSON response directly for 429
+            # Note: We can't easily raise HTTPException in middleware, so we return Response
+            response = JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."}
+            )
+            return apply_security_headers(response, request)
+
+    # Sentinel Enhancement: Rate Limiting for Read Operations (GET)
+    # Protects against DoS attacks via rapid read requests (e.g., recursive scanning, file reading).
+    elif request.method == "GET":
+        if read_rate_limiter.is_rate_limited(client_ip):
+            logger.warning(f"Read Rate limit exceeded for {client_ip} on {request.url.path}")
+            response = JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."}
+            )
+            return apply_security_headers(response, request)
+
+    response = await call_next(request)
+    return apply_security_headers(response, request)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
