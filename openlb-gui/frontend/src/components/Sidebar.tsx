@@ -50,11 +50,11 @@ const SidebarItem = memo(({ item, isSelected, onSelect, searchRegex }: SidebarIt
   // Optimization: Custom comparison to prevent re-renders when parent 'cases' list is refreshed
   // but this individual item hasn't changed. Standard React.memo (shallow compare) fails here
   // because the 'item' object reference changes on every fetch.
+  // BOLT OPTIMIZATION: Only compare 'id' for item data equality.
+  // 'id' uniqueness guarantees 'name' and 'domain' are the same.
   return (
     prev.isSelected === next.isSelected &&
     prev.item.id === next.item.id &&
-    prev.item.name === next.item.name &&
-    prev.item.domain === next.item.domain &&
     prev.onSelect === next.onSelect &&
     prev.searchRegex === next.searchRegex
   );

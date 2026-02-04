@@ -29,3 +29,7 @@
 ## 2026-05-21 - [Optimized Ignore Patterns]
 **Learning:** `shutil.ignore_patterns` uses `fnmatch` inside a loop, creating O(N*M) complexity where N is files and M is patterns. For directories with thousands of files (e.g. simulation outputs), this is significantly slower than O(N) set lookups and `str.endswith`.
 **Action:** Replace `shutil.ignore_patterns` with a custom callback using `set` (for exact matches) and `tuple` (for `endswith` extensions) when performance is critical.
+
+## 2026-02-04 - [ID-Based Equality Checks]
+**Learning:** Deep equality checks in React.memo (comparing every field) are O(N) per item. If an object has a unique ID that structurally implies the content of other fields (e.g. filesystem path implies name/domain), comparing only the ID is sufficient and much faster.
+**Action:** Replace multi-field comparisons with single-ID comparisons in `React.memo` and equality helpers when data uniqueness is guaranteed by the backend or data source.
