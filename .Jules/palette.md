@@ -49,3 +49,7 @@
 ## 2025-06-01 - Ambiguous List Items
 **Learning:** In lists where items may have identical names but different contexts (e.g. same name in different domains), standard tooltips showing only the name fail to disambiguate.
 **Action:** Enhance tooltips and `aria-label` attributes to include the full context (e.g. "Domain / Name") to prevent confusion for both mouse and screen reader users.
+
+## 2025-06-02 - Focus Ring Contrast on Colored Backgrounds
+**Learning:** Using a standard focus ring color (e.g., blue) on colored active states (like a blue selected list item or green primary button) fails accessibility contrast ratios.
+**Action:** Conditionally swap the focus ring color to white (or a high-contrast alternative) when the element has a saturated background color.

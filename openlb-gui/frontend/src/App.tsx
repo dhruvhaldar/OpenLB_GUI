@@ -468,7 +468,7 @@ function App() {
                   onClick={handleRun}
                   disabled={status !== 'idle'}
                   title={status === 'running' ? 'Running simulation...' : status === 'building' ? 'Cannot run while simulation is building' : 'Run simulation (Ctrl+Enter)'}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
                 >
                   {status === 'running' ? (
                     <Loader2 className="animate-spin" size={16} />

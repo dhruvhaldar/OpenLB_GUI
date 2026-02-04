@@ -40,7 +40,7 @@ const SidebarItem = memo(({ item, isSelected, onSelect, searchRegex }: SidebarIt
       title={accessibleName}
       aria-label={accessibleName}
       aria-current={isSelected ? 'true' : undefined}
-      className={`group w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+      className={`group w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white focus-visible:ring-white' : 'text-gray-300 hover:bg-gray-700 focus-visible:ring-blue-500'}`}
     >
       <Folder size={16} aria-hidden="true" />
       <HighlightMatch text={item.name} regex={searchRegex} />
