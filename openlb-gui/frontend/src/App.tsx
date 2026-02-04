@@ -61,20 +61,15 @@ function App() {
   // The backend now guarantees sorted output (by domain/name), so we can assume
   // that if the lists are equal, they must be in the same order.
   // This removes the O(N) Map allocation/lookup overhead.
+  // BOLT OPTIMIZATION: Only compare 'id'. The 'id' (relative path) uniquely identifies
+  // the case and implies 'name', 'domain', and 'path' equality.
+  // This reduces the comparison cost by 75% per item.
   const areCasesEqual = useCallback((prev: Case[], next: Case[]) => {
     if (prev === next) return true;
     if (prev.length !== next.length) return false;
 
     for (let i = 0; i < prev.length; i++) {
-      const p = prev[i];
-      const n = next[i];
-
-      if (
-        p.id !== n.id ||
-        p.name !== n.name ||
-        p.domain !== n.domain ||
-        p.path !== n.path
-      ) {
+      if (prev[i].id !== next[i].id) {
         return false;
       }
     }

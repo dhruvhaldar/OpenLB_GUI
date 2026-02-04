@@ -29,7 +29,7 @@ def test_sidebar_navigation():
 
         # Navigate to the frontend
         print("Navigating to frontend...")
-        page.goto("http://localhost:5173")
+        page.goto("http://localhost:4173")
 
         # Wait for cases to load
         print("Waiting for cases to load...")
