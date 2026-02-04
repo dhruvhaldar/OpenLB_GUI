@@ -15,8 +15,8 @@ def test_read_rate_limiting():
     try:
         with patch("backend.main.read_rate_limiter") as mock_limiter:
             # Scenario: First 2 requests allowed, 3rd blocked
-            # False = Not limited, True = Limited
-            mock_limiter.is_rate_limited.side_effect = [False, False, True]
+            # (is_limited, retry_after)
+            mock_limiter.is_rate_limited.side_effect = [(False, 0), (False, 0), (True, 60)]
 
             # 1. Allowed
             res1 = client.get("/cases")
@@ -30,6 +30,7 @@ def test_read_rate_limiting():
             res3 = client.get("/cases")
             assert res3.status_code == 429
             assert "Too many requests" in res3.json()["detail"]
+            assert res3.headers.get("Retry-After") == "60"
     except AttributeError:
         # This catch block is just to allow the test file to be created without
         # crashing if someone tries to import it before the fix.

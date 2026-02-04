@@ -39,10 +39,11 @@ class RateLimiter:
         # instead of O(N) list slicing/re-allocation during cleanup.
         self.requests = defaultdict(deque)
         # Clean up old entries periodically (in a real app, use Redis)
-        self.last_cleanup = time.time()
+        # Sentinel Enhancement: Use monotonic time for robust duration checks
+        self.last_cleanup = time.monotonic()
 
-    def is_rate_limited(self, ip: str) -> bool:
-        now = time.time()
+    def is_rate_limited(self, ip: str) -> tuple[bool, int]:
+        now = time.monotonic()
         # Sentinel Fix: Prevent Global Reset by cleaning up ONLY expired/empty IPs
         # This prevents active users' history from being wiped, ensuring consistent rate limiting.
         if now - self.last_cleanup > 60:
@@ -66,10 +67,14 @@ class RateLimiter:
             dq.popleft()
 
         if len(dq) >= self.limit:
-            return True
+            # Calculate retry after time (in seconds)
+            # We use the oldest request time (dq[0]) to determine when the slot frees up.
+            retry_after = 60 - (now - dq[0])
+            # Ensure it's at least 1 second and integer
+            return True, int(retry_after) + 1 if retry_after > 0 else 1
 
         dq.append(now)
-        return False
+        return False, 0
 
 rate_limiter = RateLimiter(requests_per_minute=20) # 20 req/min/IP for sensitive actions
 read_rate_limiter = RateLimiter(requests_per_minute=100) # 100 req/min/IP for read operations
@@ -242,25 +247,33 @@ async def add_security_headers(request: Request, call_next):
     # Sentinel: Broadened scope to all state-changing methods to prevent bypasses and future oversight
     client_ip = request.client.host if request.client else "unknown"
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-        if rate_limiter.is_rate_limited(client_ip):
+        is_limited, retry_after = rate_limiter.is_rate_limited(client_ip)
+        if is_limited:
             logger.warning(f"Write Rate limit exceeded for {client_ip} on {request.url.path}")
             # We return a JSON response directly for 429
             # Note: We can't easily raise HTTPException in middleware, so we return Response
             response = JSONResponse(
                 status_code=429,
-                content={"detail": "Too many requests. Please try again later."}
+                content={"detail": f"Too many requests. Please try again in {retry_after} seconds."}
             )
+            # Sentinel Enhancement: Add Retry-After header
+            # This helps clients (and bots) know when they can try again,
+            # improving protocol compliance and reducing server load from blind retries.
+            response.headers["Retry-After"] = str(retry_after)
             return apply_security_headers(response, request)
 
     # Sentinel Enhancement: Rate Limiting for Read Operations (GET)
     # Protects against DoS attacks via rapid read requests (e.g., recursive scanning, file reading).
     elif request.method == "GET":
-        if read_rate_limiter.is_rate_limited(client_ip):
+        is_limited, retry_after = read_rate_limiter.is_rate_limited(client_ip)
+        if is_limited:
             logger.warning(f"Read Rate limit exceeded for {client_ip} on {request.url.path}")
             response = JSONResponse(
                 status_code=429,
-                content={"detail": "Too many requests. Please try again later."}
+                content={"detail": f"Too many requests. Please try again in {retry_after} seconds."}
             )
+            # Sentinel Enhancement: Add Retry-After header
+            response.headers["Retry-After"] = str(retry_after)
             return apply_security_headers(response, request)
 
     response = await call_next(request)
