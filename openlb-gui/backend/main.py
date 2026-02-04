@@ -252,9 +252,9 @@ async def add_security_headers(request: Request, call_next):
             )
             return apply_security_headers(response, request)
 
-    # Sentinel Enhancement: Rate Limiting for Read Operations (GET)
+    # Sentinel Enhancement: Rate Limiting for Read Operations (GET/HEAD)
     # Protects against DoS attacks via rapid read requests (e.g., recursive scanning, file reading).
-    elif request.method == "GET":
+    elif request.method in ["GET", "HEAD"]:
         if read_rate_limiter.is_rate_limited(client_ip):
             logger.warning(f"Read Rate limit exceeded for {client_ip} on {request.url.path}")
             response = JSONResponse(
