@@ -125,7 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     );
   }, [cases]);
 
-  const filteredCases = useMemo(() => {
+  const matchedCases = useMemo(() => {
     if (!deferredFilter) return cases;
     const lowerFilter = deferredFilter.toLowerCase();
 
@@ -135,6 +135,26 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
       searchIndex[i].includes(lowerFilter)
     );
   }, [cases, deferredFilter, searchIndex]);
+
+  // Bolt Optimization: Limit the number of rendered items to prevent DOM bloat
+  // Rendering thousands of items (even with content-visibility) is expensive for React reconciliation.
+  // We show the top 100 matches, which covers 99% of use cases.
+  const MAX_DISPLAY_ITEMS = 100;
+
+  const displayedCases = useMemo(() => {
+    const sliced = matchedCases.slice(0, MAX_DISPLAY_ITEMS);
+
+    // UX Improvement: Ensure the currently selected case is always visible
+    // even if it falls outside the top 100 matches (e.g. when clearing a filter).
+    // This allows the auto-scroll logic to work correctly.
+    if (selectedCaseId) {
+      const selectedIndex = matchedCases.findIndex(c => c.id === selectedCaseId);
+      if (selectedIndex >= MAX_DISPLAY_ITEMS) {
+        sliced.push(matchedCases[selectedIndex]);
+      }
+    }
+    return sliced;
+  }, [matchedCases, selectedCaseId]);
 
   const handleClearFilter = () => {
     setFilter('');
@@ -154,8 +174,8 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
     } else if (e.key === 'Enter') {
       e.preventDefault();
       // UX: "Power User" shortcut - automatically select the top result
-      if (filteredCases.length > 0) {
-        onSelectCase(filteredCases[0]);
+      if (matchedCases.length > 0) {
+        onSelectCase(matchedCases[0]);
         inputRef.current?.blur();
       }
     }
@@ -287,8 +307,13 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
           <div>
             <div className="flex items-center justify-between mb-2">
               <h2 id="cases-heading" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cases</h2>
-              <span className="text-[10px] text-gray-500 font-mono" aria-label={`${filteredCases.length} of ${cases.length} cases shown`}>
-                {filteredCases.length < cases.length ? `${filteredCases.length}/${cases.length}` : cases.length}
+              <span className="text-[10px] text-gray-500 font-mono" aria-label={`${displayedCases.length} of ${matchedCases.length} matching cases shown`}>
+                {displayedCases.length < matchedCases.length
+                  ? `Displaying ${displayedCases.length} of ${matchedCases.length}`
+                  : matchedCases.length < cases.length
+                    ? `${matchedCases.length}/${cases.length}`
+                    : cases.length
+                }
               </span>
             </div>
             <ul
@@ -315,9 +340,9 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
                     <div className="h-4 bg-gray-700 rounded w-28" />
                   </li>
                 </>
-              ) : filteredCases.length > 0 ? (
+              ) : displayedCases.length > 0 ? (
                 <SidebarListItems
-                  cases={filteredCases}
+                  cases={displayedCases}
                   selectedId={selectedCaseId}
                   onSelect={onSelectCase}
                   searchRegex={searchRegex}
