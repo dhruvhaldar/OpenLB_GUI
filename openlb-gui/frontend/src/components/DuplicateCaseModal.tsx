@@ -2,6 +2,13 @@ import React, { memo, useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 
+const VALID_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
+const RESERVED_WINDOWS_NAMES = new Set([
+  "CON", "PRN", "AUX", "NUL",
+  "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+  "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+]);
+
 interface DuplicateCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,6 +29,17 @@ const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
   const duplicateInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(initialName);
 
+  const validationError = (() => {
+    if (!name) return null;
+    if (!VALID_NAME_PATTERN.test(name)) {
+      return "Invalid name. Use alphanumeric, underscore, and hyphen only.";
+    }
+    if (RESERVED_WINDOWS_NAMES.has(name.toUpperCase())) {
+      return "Invalid name. This name is reserved by Windows.";
+    }
+    return null;
+  })();
+
   useEffect(() => {
     if (isOpen) {
       // Small timeout to allow dialog to open and settle
@@ -35,8 +53,12 @@ const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(name);
+    if (!validationError) {
+      onSubmit(name);
+    }
   };
+
+  const displayError = error || validationError;
 
   return (
     <Modal
@@ -56,16 +78,16 @@ const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={`w-full bg-gray-900 border rounded px-3 py-2 text-white focus:outline-none placeholder-gray-600 transition-colors ${
-              error
+              displayError
                 ? 'border-red-500 focus:ring-2 focus:ring-red-500'
                 : 'border-gray-600 focus:ring-2 focus:ring-blue-500'
             }`}
             placeholder="e.g. cylinder-flow-v2"
-            aria-invalid={!!error}
-            aria-describedby={error ? "duplicate-error-msg" : undefined}
+            aria-invalid={!!displayError}
+            aria-describedby={displayError ? "duplicate-error-msg" : undefined}
           />
-          {error && (
-            <p id="duplicate-error-msg" className="mt-2 text-sm text-red-400">{error}</p>
+          {displayError && (
+            <p id="duplicate-error-msg" className="mt-2 text-sm text-red-400">{displayError}</p>
           )}
         </div>
         <div className="flex justify-end gap-2">
@@ -78,7 +100,7 @@ const DuplicateCaseModal: React.FC<DuplicateCaseModalProps> = ({
           </button>
           <button
             type="submit"
-            disabled={!name.trim() || isDuplicating}
+            disabled={!name.trim() || isDuplicating || !!validationError}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
           >
             {isDuplicating && <Loader2 className="animate-spin" size={16} />}
