@@ -351,6 +351,10 @@ if os.name == 'nt':
     IGNORED_EXTENSIONS = tuple(ext.lower() for ext in IGNORED_EXTENSIONS)
     IGNORED_DIRS = {name.lower() for name in IGNORED_DIRS}
 
+# Security Constants for DoS Prevention
+MAX_CASE_SIZE = 200 * 1024 * 1024 # 200 MB limit for duplication source
+MAX_CASE_FILES = 5000             # 5000 files limit
+
 def fast_ignore_patterns(path, names):
     """
     Optimized ignore callback for shutil.copytree.
@@ -373,6 +377,45 @@ def fast_ignore_patterns(path, names):
             ignored.add(name)
 
     return ignored
+
+def check_directory_limits(path: str, max_size: int = None, max_files: int = None):
+    """
+    Scans the directory to ensure it doesn't exceed size or file count limits.
+    Prevents DoS via Resource Exhaustion (Directory Bomb).
+    Ignores files that would not be copied anyway.
+    """
+    # Use runtime lookup for defaults to allow patching in tests
+    if max_size is None: max_size = MAX_CASE_SIZE
+    if max_files is None: max_files = MAX_CASE_FILES
+
+    total_size = 0
+    total_files = 0
+
+    for root, dirs, files in os.walk(path):
+        # Apply the same ignore logic as copytree
+        ignored = fast_ignore_patterns(root, dirs + files)
+
+        # Modify dirs in-place to prune traversal
+        # This is critical for performance and correctness
+        dirs[:] = [d for d in dirs if d not in ignored]
+
+        # Filter files
+        valid_files = [f for f in files if f not in ignored]
+
+        for f in valid_files:
+            total_files += 1
+            if total_files > max_files:
+                 raise HTTPException(status_code=413, detail=f"Source case contains too many files (limit: {max_files})")
+
+            filepath = os.path.join(root, f)
+            try:
+                # Use lstat to match copytree's symlinks=True behavior (counts link size, not target)
+                st = os.lstat(filepath)
+                total_size += st.st_size
+                if total_size > max_size:
+                     raise HTTPException(status_code=413, detail=f"Source case is too large (limit: {max_size // (1024*1024)}MB)")
+            except OSError:
+                pass
 
 # Allowed environment variables to pass to subprocesses
 SAFE_ENV_VARS = {
@@ -655,6 +698,9 @@ def duplicate_case(req: DuplicateRequest, request: Request):
 
     if os.path.exists(target_path):
         raise HTTPException(status_code=409, detail="Case with this name already exists")
+
+    # Security Enhancement: Check limits BEFORE copying to prevent DoS (Directory Bomb)
+    check_directory_limits(safe_source)
 
     try:
         # Security Fix: Use symlinks=True to prevent dereferencing symlinks.
