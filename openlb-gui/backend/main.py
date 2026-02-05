@@ -343,7 +343,8 @@ IGNORED_EXTENSIONS = (
     ".log", ".out", ".err"               # Logs
 )
 IGNORED_DIRS = {
-    "tmp", "__pycache__", ".git", ".DS_Store" # Temporary/System files
+    "tmp", "__pycache__", ".git", ".DS_Store", # Temporary/System files
+    "build", "dist", "node_modules", "venv", ".venv", "env", ".env", ".idea", ".vscode" # Dev artifacts
 }
 
 # Pre-compute lowercase versions for Windows case-insensitivity
