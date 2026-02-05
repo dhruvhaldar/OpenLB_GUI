@@ -53,3 +53,7 @@
 ## 2025-06-02 - Focus Ring Contrast on Colored Backgrounds
 **Learning:** Using a standard focus ring color (e.g., blue) on colored active states (like a blue selected list item or green primary button) fails accessibility contrast ratios.
 **Action:** Conditionally swap the focus ring color to white (or a high-contrast alternative) when the element has a saturated background color.
+
+## 2025-06-03 - Focus Restoration
+**Learning:** When a focused element (like a Delete button) is removed from the DOM, focus reverts to the body, causing a loss of context for keyboard users.
+**Action:** Detect when the active item is removed (e.g., via effect cleanup or state change) and programmatically move focus to a logical container (like the main content area or list).
