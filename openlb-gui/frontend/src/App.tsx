@@ -29,6 +29,13 @@ function App() {
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // UX Improvement: Reference to main content container for focus management
+  const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // UX Improvement: Track previous selected case to handle focus restoration
+  // when a case is deleted or deselected.
+  const prevSelectedCase = useRef<Case | null>(null);
+
   // Optimization: Cache config content to avoid unnecessary network requests
   // Use a Map to implement LRU (Least Recently Used) eviction policy.
   // Limit to 20 items to prevent memory bloat from large config files.
@@ -106,6 +113,16 @@ function App() {
     } else {
       document.title = 'OpenLB Manager';
     }
+
+    // UX Improvement: Restore focus to main content when case selection is cleared (e.g. after delete)
+    // This prevents focus from dropping to the document body, which is confusing for keyboard users.
+    if (prevSelectedCase.current && !selectedCase) {
+      // Use requestAnimationFrame to ensure the "No Case Selected" view is rendered
+      requestAnimationFrame(() => {
+        mainContentRef.current?.focus();
+      });
+    }
+    prevSelectedCase.current = selectedCase;
   }, [selectedCase]);
 
   const fetchConfig = useCallback(async (casePath: string) => {
@@ -401,7 +418,12 @@ function App() {
       />
 
       {/* Main Content */}
-      <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col overflow-hidden focus:outline-none">
+      <div
+        id="main-content"
+        ref={mainContentRef}
+        tabIndex={-1}
+        className="flex-1 flex flex-col overflow-hidden focus:outline-none"
+      >
         {selectedCase ? (
           <>
             <header className="bg-gray-800 p-4 border-b border-gray-700 flex justify-between items-center">
