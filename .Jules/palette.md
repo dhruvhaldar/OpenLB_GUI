@@ -57,3 +57,7 @@
 ## 2025-06-03 - Focus Restoration
 **Learning:** When a focused element (like a Delete button) is removed from the DOM, focus reverts to the body, causing a loss of context for keyboard users.
 **Action:** Detect when the active item is removed (e.g., via effect cleanup or state change) and programmatically move focus to a logical container (like the main content area or list).
+
+## 2025-06-04 - Seamless Navigation Loop
+**Learning:** Users searching in a sidebar expect to be able to "back out" of a list into the filter that created it using the arrow keys, not just Tab/Shift+Tab.
+**Action:** Always check if a list component has a corresponding search/filter input and ensure ArrowUp/Down connects them bi-directionally.

@@ -253,6 +253,9 @@ const Sidebar: React.FC<SidebarProps> = ({ cases, selectedCaseId, onSelectCase, 
       if (prevLi) {
         const btn = prevLi.querySelector('button');
         if (btn) (btn as HTMLElement).focus();
+      } else {
+        // UX: Allow seamless navigation back to search input
+        inputRef.current?.focus();
       }
     }
   };
