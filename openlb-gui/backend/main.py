@@ -41,9 +41,23 @@ class RateLimiter:
         # Clean up old entries periodically (in a real app, use Redis)
         # Sentinel Enhancement: Use monotonic time for robust duration checks
         self.last_cleanup = time.monotonic()
+        # Sentinel Enhancement: Memory Protection
+        # Limit total tracked IPs to prevent Memory Exhaustion and CPU spikes during cleanup (DoS).
+        self.MAX_IP_COUNT = 10000
 
     def is_rate_limited(self, ip: str) -> tuple[bool, int]:
         now = time.monotonic()
+
+        # Sentinel Security Check: Memory Protection
+        # Before adding a new IP, check if we are at capacity.
+        # This prevents unbounded growth of the requests dictionary (DoS vector).
+        if len(self.requests) > self.MAX_IP_COUNT:
+            # Emergency cleanup: Clear all to prevent crash/hang.
+            # While this resets limits for current users, availability takes precedence over rate limiting
+            # in a massive DoS scenario.
+            self.requests.clear()
+            logger.warning("Rate Limiter memory protection triggered. Cleared all IPs to prevent exhaustion.")
+
         # Sentinel Fix: Prevent Global Reset by cleaning up ONLY expired/empty IPs
         # This prevents active users' history from being wiped, ensuring consistent rate limiting.
         if now - self.last_cleanup > 60:
