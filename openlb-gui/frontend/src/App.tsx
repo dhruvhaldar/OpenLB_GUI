@@ -346,15 +346,9 @@ function App() {
         setDeleteError(err.detail || 'Failed to delete');
         return;
       }
-      // Refresh cases
-      const casesRes = await fetch(`${API_URL}/cases`);
-      const casesData = await casesRes.json();
-
-      // Optimization: Avoid state update if data is identical
-      setCases(prev => {
-        if (areCasesEqual(prev, casesData)) return prev;
-        return casesData;
-      });
+      // Optimization: Update state locally instead of re-fetching all cases
+      // This saves a potentially expensive directory scan on the backend (O(Filesystem))
+      setCases(prev => prev.filter(c => c.id !== selectedCase.id));
 
       setSelectedCase(null);
       setConfig(null);
@@ -366,7 +360,7 @@ function App() {
     } finally {
       setIsDeleting(false);
     }
-  }, [selectedCase, areCasesEqual]);
+  }, [selectedCase]);
 
   const handleCloseDuplicate = useCallback(() => {
     setIsDuplicateModalOpen(false);
