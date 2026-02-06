@@ -392,18 +392,27 @@ def check_directory_limits(path: str, max_size: int = None, max_files: int = Non
     total_size = 0
     total_files = 0
 
+    is_windows = os.name == 'nt'
+
     for root, dirs, files in os.walk(path):
-        # Apply the same ignore logic as copytree
-        ignored = fast_ignore_patterns(root, dirs + files)
+        # Bolt Optimization: Filter in-place without creating intermediate lists
+        # Replaces calling fast_ignore_patterns (O(N) alloc + O(N) set build) with inline checks (O(N) iter)
 
-        # Modify dirs in-place to prune traversal
-        # This is critical for performance and correctness
-        dirs[:] = [d for d in dirs if d not in ignored]
+        # 1. Prune directories (modify dirs in-place)
+        # Iterate backwards to safely remove elements while iterating
+        for i in range(len(dirs) - 1, -1, -1):
+            d = dirs[i]
+            check_name = d.lower() if is_windows else d
+            # fast_ignore_patterns checks both IGNORED_DIRS and IGNORED_EXTENSIONS for all names
+            if check_name in IGNORED_DIRS or check_name.endswith(IGNORED_EXTENSIONS):
+                del dirs[i]
 
-        # Filter files
-        valid_files = [f for f in files if f not in ignored]
+        # 2. Process files
+        for f in files:
+            check_name = f.lower() if is_windows else f
+            if check_name in IGNORED_DIRS or check_name.endswith(IGNORED_EXTENSIONS):
+                continue
 
-        for f in valid_files:
             total_files += 1
             if total_files > max_files:
                  raise HTTPException(status_code=413, detail=f"Source case contains too many files (limit: {max_files})")
