@@ -61,3 +61,7 @@
 ## 2025-06-04 - Seamless Navigation Loop
 **Learning:** Users searching in a sidebar expect to be able to "back out" of a list into the filter that created it using the arrow keys, not just Tab/Shift+Tab.
 **Action:** Always check if a list component has a corresponding search/filter input and ensure ArrowUp/Down connects them bi-directionally.
+
+## 2025-06-05 - Visual List Disambiguation
+**Learning:** Relying solely on tooltips to disambiguate identical list items (e.g. same name, different parent) forces sighted users to hunt-and-peck.
+**Action:** Display the distinguishing context (e.g. domain/parent folder) directly in the list item layout, using secondary text styling to maintain hierarchy without clutter.
