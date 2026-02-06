@@ -290,7 +290,17 @@ async def add_security_headers(request: Request, call_next):
             response.headers["Retry-After"] = str(retry_after)
             return apply_security_headers(response, request)
 
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        logger.error(f"Internal Server Error: {exc}", exc_info=True)
+        # Sentinel Fix: Ensure security headers are applied even on unhandled exceptions (Fail Secure).
+        # We return a generic 500 response to avoid leaking internal details.
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal Server Error"}
+        )
+
     return apply_security_headers(response, request)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
