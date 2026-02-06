@@ -42,8 +42,17 @@ const SidebarItem = memo(({ item, isSelected, onSelect, searchRegex }: SidebarIt
       aria-current={isSelected ? 'true' : undefined}
       className={`group w-full text-left px-3 py-2 rounded flex items-center gap-2 focus-visible:ring-2 focus-visible:outline-none ${isSelected ? 'bg-blue-600 text-white focus-visible:ring-white' : 'text-gray-300 hover:bg-gray-700 focus-visible:ring-blue-500'}`}
     >
-      <Folder size={16} aria-hidden="true" />
-      <HighlightMatch text={item.name} regex={searchRegex} />
+      <Folder size={16} aria-hidden="true" className="shrink-0" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center">
+          <HighlightMatch text={item.name} regex={searchRegex} />
+        </div>
+        {item.domain && item.domain !== 'Uncategorized' && (
+          <div className={`text-xs truncate ${isSelected ? 'text-blue-200' : 'text-gray-500 group-hover:text-gray-400'}`}>
+            {item.domain}
+          </div>
+        )}
+      </div>
     </button>
   );
 }, (prev, next) => {
