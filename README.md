@@ -39,15 +39,14 @@ The project is organized into the following structure:
         └── aorta_sim/
 ```
 
-*   **Backend**: A Python FastAPI server that handles file system operations, executes shell commands (`make`, `make run`), and serves the API.
+*   **Backend**: A Python FastAPI server that handles file system operations, executes build commands via Docker, and serves the API.
 *   **Frontend**: A React application built with Vite and styled with Tailwind CSS, communicating with the backend via REST API.
 
 ## 📋 Prerequisites
 
-*   **OpenLB**: v1.6 or higher (installed and referenced in your Makefiles).
-*   **MPI**: OpenMPI or MPICH (for parallel simulations).
+*   **Docker Desktop**: Required for building and running OpenLB simulations.
 *   **Python**: v3.8 or higher.
-*   **Node.js**: v18 or higher (for building the frontend).
+*   **Bun**: v1.0 or higher (for building the frontend).
 
 ## 🛠 Installation
 
@@ -57,7 +56,12 @@ git clone https://github.com/dhruvhaldar/OpenLB_GUI.git
 cd OpenLB_GUI
 ```
 
-### 2. Backend Setup
+### 2. Build the OpenLB Docker Image
+```bash
+docker build -t openlb-gui:latest .
+```
+
+### 3. Backend Setup
 Navigate to the backend directory and set up a virtual environment:
 
 ```bash
@@ -77,7 +81,7 @@ For Windows:
 pip install fastapi uvicorn
 ```
 
-### 3. Frontend Setup
+### 4. Frontend Setup
 Navigate to the frontend directory and install dependencies:
 
 ```bash

@@ -33,3 +33,15 @@
 ## 2026-02-04 - [ID-Based Equality Checks]
 **Learning:** Deep equality checks in React.memo (comparing every field) are O(N) per item. If an object has a unique ID that structurally implies the content of other fields (e.g. filesystem path implies name/domain), comparing only the ID is sufficient and much faster.
 **Action:** Replace multi-field comparisons with single-ID comparisons in `React.memo` and equality helpers when data uniqueness is guaranteed by the backend or data source.
+
+## 2026-02-16 - [Docker-Delegated Builds]
+**Learning:** Running `make` directly via `subprocess` fails on Windows where GNU Make, MPI, and the OpenLB toolchain are unavailable. Docker provides an isolated, reproducible build environment without requiring users to install complex native toolchains.
+**Action:** Wrap `subprocess` build commands in `docker run --rm -v host_dir:/workspace -w /workspace/case_path image_name make` to delegate compilation to a pre-configured container while keeping the backend and frontend native for responsiveness.
+
+## 2026-02-16 - [Makefile Variable Override via CLI]
+**Learning:** Case Makefiles hardcode `OLB_ROOT := ../../../olb-release` which resolves relative to the host filesystem structure. Inside a Docker container, this path doesn't exist. Rather than modifying every Makefile, `make` allows variable overrides at the command line (`make OLB_ROOT=/home/release-1.9.0`), which takes precedence over assignments in the Makefile.
+**Action:** Use command-line variable overrides (`make VAR=value`) instead of patching Makefiles when the build environment differs from the development environment. This keeps source files portable across contexts.
+
+## 2026-02-16 - [Windows-to-Linux Path Translation]
+**Learning:** `os.path.relpath()` on Windows produces backslash-separated paths (e.g., `Benchmarks\lid_driven_cavity`). When passed as a Docker `-w` working directory argument targeting a Linux container, these paths fail silently or resolve incorrectly.
+**Action:** Always convert relative paths to POSIX format (forward slashes) before passing them to Docker commands: `rel_path.replace("\\", "/")`.

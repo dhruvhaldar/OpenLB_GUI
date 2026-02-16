@@ -315,6 +315,28 @@ CASES_DIR = str(CASES_PATH)
 # This avoids string allocation and repeated indexing operations in hot paths.
 CASES_DIR_WITH_SEP = os.path.join(CASES_DIR, "")
 
+# Docker Configuration for OpenLB builds
+# Builds run inside a Docker container with my_cases/ bind-mounted
+DOCKER_IMAGE = "openlb-gui:latest"
+DOCKER_OLB_ROOT = "/home/release-1.9.0"
+CONTAINER_WORKSPACE = "/workspace"
+
+def get_docker_cmd(make_args: list, case_rel_path: str) -> list:
+    """
+    Wraps a make command to run inside the OpenLB Docker container.
+    Bind-mounts CASES_DIR to /workspace and sets the working directory
+    to the case's relative path inside the container.
+    """
+    # Convert Windows backslashes to POSIX forward slashes for Linux container
+    posix_rel_path = case_rel_path.replace("\\", "/")
+    return [
+        "docker", "run", "--rm",
+        "-v", f"{CASES_DIR}:{CONTAINER_WORKSPACE}",
+        "-w", f"{CONTAINER_WORKSPACE}/{posix_rel_path}",
+        DOCKER_IMAGE,
+        *make_args, f"OLB_ROOT={DOCKER_OLB_ROOT}"
+    ]
+
 # Global lock to prevent concurrent build/run operations
 # This prevents Resource Exhaustion DoS and file corruption
 execution_lock = threading.Lock()
@@ -928,9 +950,11 @@ def build_case(req: CommandRequest, request: Request):
                 # Use sanitized environment to prevent secret leakage
                 # SENTINEL FIX: Use run_command_safe to kill process tree on timeout
                 # This prevents zombie processes if 'make' spawns children.
+                # Docker Integration: Build runs inside the OpenLB container
+                case_rel_path = os.path.relpath(safe_path, CASES_DIR)
                 try:
                     return_code = run_command_safe(
-                        ["make"],
+                        get_docker_cmd(["make"], case_rel_path),
                         cwd=safe_path,
                         env=get_safe_env(),
                         stdout=tmp,
@@ -989,9 +1013,11 @@ def run_case(req: CommandRequest, request: Request):
             with tempfile.TemporaryFile(mode='w+b') as tmp:
                 # Use sanitized environment to prevent secret leakage
                 # SENTINEL FIX: Use run_command_safe to kill process tree on timeout
+                # Docker Integration: Run executes inside the OpenLB container
+                case_rel_path = os.path.relpath(safe_path, CASES_DIR)
                 try:
                     return_code = run_command_safe(
-                        ["make", "run"],
+                        get_docker_cmd(["make", "run"], case_rel_path),
                         cwd=safe_path,
                         env=get_safe_env(),
                         stdout=tmp,

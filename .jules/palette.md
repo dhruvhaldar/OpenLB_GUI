@@ -65,3 +65,7 @@
 ## 2025-06-05 - Visual List Disambiguation
 **Learning:** Relying solely on tooltips to disambiguate identical list items (e.g. same name, different parent) forces sighted users to hunt-and-peck.
 **Action:** Display the distinguishing context (e.g. domain/parent folder) directly in the list item layout, using secondary text styling to maintain hierarchy without clutter.
+
+## 2026-02-16 - Silent Network Failures
+**Learning:** When API requests are blocked by CSP or CORS, the UI shows a generic "No cases found" empty state with no indication that a network error occurred. Users perceive this as "no data exists" rather than "data fetch failed", leading to confusion and misdiagnosis.
+**Action:** Distinguish between "empty result" and "fetch error" states in the UI. Show a clear error banner with the failure reason (e.g., "Connection refused", "Blocked by security policy") and a retry button, rather than reusing the empty-state component for both scenarios.
