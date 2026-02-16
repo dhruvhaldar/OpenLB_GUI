@@ -55,7 +55,17 @@ Navigate to the backend directory and set up a virtual environment:
 ```bash
 cd openlb-gui/backend
 python3 -m venv venv
+```
+
+For Linux/Unix:
+```bash
 source venv/bin/activate
+pip install fastapi uvicorn
+```
+
+For Windows:
+```powershell
+.\venv\Scripts\Activate.ps1
 pip install fastapi uvicorn
 ```
 
