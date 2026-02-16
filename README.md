@@ -7,6 +7,8 @@
 [![fastapi](https://img.shields.io/badge/fastapi-0.129.0-purple?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![python](https://img.shields.io/badge/python-3.8+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![tailwind](https://img.shields.io/badge/tailwind-3.3.0-blue?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![pytest](https://img.shields.io/badge/pytest-9.0.2-orange?style=flat&logo=pytest&logoColor=white)](https://pytest.org/)
+[![docker](https://img.shields.io/badge/docker-27.1.1-blue?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 
 OpenLB Manager is a lightweight, full-stack graphical user interface for the OpenLB C++ library. It allows users to scan, configure, compile, and run simulation cases without interacting directly with the terminal.
 
