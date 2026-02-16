@@ -1,5 +1,13 @@
 # OpenLB Manager GUI
 
+[![GitHub license](https://img.shields.io/github/license/dhruvhaldar/OpenLB_GUI)](https://github.com/dhruvhaldar/OpenLB_GUI/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/dhruvhaldar/OpenLB_GUI)](https://github.com/dhruvhaldar/OpenLB_GUI/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/dhruvhaldar/OpenLB_GUI)](https://github.com/dhruvhaldar/OpenLB_GUI/commits/main)
+[![bun](https://img.shields.io/badge/bun-1.3.9-black?style=flat&logo=bun&logoColor=white)](https://bun.sh)
+[![fastapi](https://img.shields.io/badge/fastapi-0.129.0-purple?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![python](https://img.shields.io/badge/python-3.8+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![tailwind](https://img.shields.io/badge/tailwind-3.3.0-blue?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+
 OpenLB Manager is a lightweight, full-stack graphical user interface for the OpenLB C++ library. It allows users to scan, configure, compile, and run simulation cases without interacting directly with the terminal.
 
 ## Features
@@ -74,8 +82,8 @@ Navigate to the frontend directory and install dependencies:
 
 ```bash
 cd openlb-gui/frontend/
-npm install
-npm run build
+bun install
+bun run build
 ```
 
 ## ▶️ Usage
@@ -93,7 +101,7 @@ uvicorn main:app --reload --port 8080
 **Terminal 2 (Frontend):**
 ```bash
 cd openlb-gui/frontend
-npm run dev
+bun run dev
 ```
 Open your browser at `http://localhost:5173`.
 
