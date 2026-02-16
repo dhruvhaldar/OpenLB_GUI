@@ -95,7 +95,7 @@ Run the backend and frontend in separate terminals for hot-reloading.
 ```bash
 cd openlb-gui/backend
 source venv/bin/activate
-uvicorn main:app --reload --port 8080
+uvicorn main:app --reload --port 3001
 ```
 
 **Terminal 2 (Frontend):**
@@ -133,4 +133,4 @@ my_cases/
 *   **"Case path not found"**: Ensure your `my_cases` directory is in the project root.
 *   **Build Failures**: Check the `Makefile` in the specific case directory by running `make` manually in the terminal.
 *   **MPI Errors**: Ensure `mpirun` is available in your system path.
-*   **Frontend Connection Refused**: Make sure the backend is running on port 8000.
+*   **Frontend Connection Refused**: Make sure the backend is running on port 3001.
