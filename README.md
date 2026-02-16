@@ -82,6 +82,20 @@ pip install fastapi uvicorn
 ```
 
 ### 4. Frontend Setup
+Install bun 
+for your platform:
+
+For Linux/Unix:
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+For Windows:
+```powershell
+powershell -c "irm bun.sh/install.ps1 | iex"
+```
+
+
 Navigate to the frontend directory and install dependencies:
 
 ```bash
