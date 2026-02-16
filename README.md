@@ -45,8 +45,8 @@ The project is organized into the following structure:
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-url>
-cd <repository-folder>
+git clone https://github.com/dhruvhaldar/OpenLB_GUI.git
+cd OpenLB_GUI
 ```
 
 ### 2. Backend Setup
