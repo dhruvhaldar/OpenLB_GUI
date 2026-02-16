@@ -192,20 +192,43 @@ function App() {
   const handleBuild = useCallback(async () => {
     if (!selectedCase) return;
     setStatus('building');
-    setOutput('Building...\n');
+    setOutput('');
     try {
-      const res = await fetch(`${API_URL}/build`, {
+      const res = await fetch(`${API_URL}/build/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ case_path: selectedCase.path })
       });
-      const data = await res.json();
-      // Optimization: Batch output updates to minimize re-renders and string copying overhead
-      // Prevents O(N) copy of the entire output history for the final status update
-      let newOutput = (data.stdout || '') + (data.stderr || '');
-      if (data.success) newOutput += '\nBuild Successful.\n';
-      else newOutput += '\nBuild Failed.\n';
-      setOutput(prev => appendLog(prev, newOutput));
+      if (!res.ok) {
+        const err = await res.json();
+        setOutput(prev => appendLog(prev, `\nError: ${err.detail || 'Build request failed'}\n`));
+        setStatus('idle');
+        return;
+      }
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === 'output') {
+                setOutput(prev => appendLog(prev, event.data));
+              } else if (event.type === 'done') {
+                setOutput(prev => appendLog(prev, `\n${event.data}\n`));
+              } else if (event.type === 'error') {
+                setOutput(prev => appendLog(prev, `\nError: ${event.data}\n`));
+              }
+            } catch { /* skip malformed events */ }
+          }
+        }
+      }
     } catch {
       setOutput(prev => appendLog(prev, '\nError connecting to server.\n'));
     }
@@ -217,18 +240,41 @@ function App() {
     setStatus('running');
     setOutput(prev => prev + '\nRunning...\n');
     try {
-      const res = await fetch(`${API_URL}/run`, {
+      const res = await fetch(`${API_URL}/run/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ case_path: selectedCase.path })
       });
-      const data = await res.json();
-      // Optimization: Batch output updates to minimize re-renders and string copying overhead
-      // Prevents O(N) copy of the entire output history for the final status update
-      let newOutput = (data.stdout || '') + (data.stderr || '');
-      if (data.success) newOutput += '\nRun Finished.\n';
-      else newOutput += '\nRun Failed.\n';
-      setOutput(prev => appendLog(prev, newOutput));
+      if (!res.ok) {
+        const err = await res.json();
+        setOutput(prev => appendLog(prev, `\nError: ${err.detail || 'Run request failed'}\n`));
+        setStatus('idle');
+        return;
+      }
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === 'output') {
+                setOutput(prev => appendLog(prev, event.data));
+              } else if (event.type === 'done') {
+                setOutput(prev => appendLog(prev, `\n${event.data}\n`));
+              } else if (event.type === 'error') {
+                setOutput(prev => appendLog(prev, `\nError: ${event.data}\n`));
+              }
+            } catch { /* skip malformed events */ }
+          }
+        }
+      }
     } catch {
       setOutput(prev => appendLog(prev, '\nError connecting to server.\n'));
     }
