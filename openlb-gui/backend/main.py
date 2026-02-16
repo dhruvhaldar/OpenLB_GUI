@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi import Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator, Field
 import os
@@ -13,6 +13,7 @@ import logging
 import tempfile
 import re
 import threading
+import json
 import shutil
 import time
 import signal
@@ -1046,6 +1047,108 @@ def run_case(req: CommandRequest, request: Request):
             return {"success": False, "error": "Simulation failed due to an internal error"}
     finally:
         execution_lock.release()
+
+def stream_command_output(cmd: list, cwd: str, timeout: int, action_label: str):
+    """
+    Generator that runs a command via subprocess and yields SSE events
+    for each line of output. Used by /build/stream and /run/stream.
+    """
+    try:
+        process = subprocess.Popen(
+            cmd, cwd=cwd, env=get_safe_env(),
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, bufsize=1,  # Line-buffered
+            start_new_session=True if os.name != 'nt' else False
+        )
+
+        start_time = time.time()
+        total_output_size = 0
+        max_output_size = 10 * 1024 * 1024  # 10MB
+
+        try:
+            for line in iter(process.stdout.readline, ''):
+                # Timeout check
+                if time.time() - start_time > timeout:
+                    process.kill()
+                    yield f"data: {json.dumps({'type': 'error', 'data': f'{action_label} timed out (limit: {timeout}s)'})}\n\n"
+                    break
+
+                # Output size check
+                total_output_size += len(line)
+                if total_output_size > max_output_size:
+                    process.kill()
+                    yield f"data: {json.dumps({'type': 'error', 'data': 'Output limit exceeded. Process terminated.'})}\n\n"
+                    break
+
+                yield f"data: {json.dumps({'type': 'output', 'data': line})}\n\n"
+
+            process.wait(timeout=10)
+            return_code = process.returncode
+
+            if return_code == 0:
+                yield f"data: {json.dumps({'type': 'done', 'success': True, 'data': f'{action_label} Successful.'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'done', 'success': False, 'data': f'{action_label} Failed (exit code {return_code}).'})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Stream error: {e}")
+            try:
+                process.kill()
+            except Exception:
+                pass
+            yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+
+    except Exception as e:
+        logger.error(f"{action_label} failed to start: {e}")
+        yield f"data: {json.dumps({'type': 'error', 'data': f'{action_label} failed to start: {e}'})}\n\n"
+    finally:
+        execution_lock.release()
+
+@app.post("/build/stream")
+def build_case_stream(req: CommandRequest, request: Request):
+    """Streams 'make' output via Server-Sent Events."""
+    if not execution_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Another build or run is already in progress")
+
+    safe_path = validate_case_path(req.case_path)
+    client_ip = request.client.host if request.client else "unknown"
+    logger.info(f"Streaming build: {safe_path} (Request from: {client_ip})")
+
+    if not os.path.exists(safe_path):
+        execution_lock.release()
+        raise HTTPException(status_code=404, detail="Case path not found")
+
+    case_rel_path = os.path.relpath(safe_path, CASES_DIR)
+    cmd = get_docker_cmd(["make"], case_rel_path)
+
+    return StreamingResponse(
+        stream_command_output(cmd, safe_path, timeout=300, action_label="Build"),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
+
+@app.post("/run/stream")
+def run_case_stream(req: CommandRequest, request: Request):
+    """Streams 'make run' output via Server-Sent Events."""
+    if not execution_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Another build or run is already in progress")
+
+    safe_path = validate_case_path(req.case_path)
+    client_ip = request.client.host if request.client else "unknown"
+    logger.info(f"Streaming run: {safe_path} (Request from: {client_ip})")
+
+    if not os.path.exists(safe_path):
+        execution_lock.release()
+        raise HTTPException(status_code=404, detail="Case path not found")
+
+    case_rel_path = os.path.relpath(safe_path, CASES_DIR)
+    cmd = get_docker_cmd(["make", "run"], case_rel_path)
+
+    return StreamingResponse(
+        stream_command_output(cmd, safe_path, timeout=600, action_label="Run"),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 @app.get("/config")
 def get_config(request: Request, path: str = Query(..., max_length=4096)):
